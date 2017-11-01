@@ -10,115 +10,154 @@ import ceylon.json {
     visit
 }
 
+// SUPER LOGGER
+Anything(String) log = process.writeLine;
+
 shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
 
-    class PrintState(shared String file, shared StringBuilder builder, shared variable Boolean ommitPrint) {}
+    class PrintState(shared String file,
+        shared StringBuilder builder = StringBuilder(),
+        shared variable Boolean omitPrint = false
+    ) {}
+
+    value fakePrintState = PrintState{ file = ""; omitPrint = true; };
+
     ArrayList<PrintState> state = ArrayList<PrintState>{};
     shared MutableMap<String, String> files = HashMap<String, String>{};
 
-    variable Boolean entityStart = true;
-    ArrayList<Boolean> inObject = ArrayList<Boolean>{};
-    variable Integer arrayDepth = 0;
-    variable Integer classCapturedInArray = 0;
+    variable Boolean startEntity = true;
+    ArrayList<Boolean> level = ArrayList<Boolean>{};
     variable String? currentKey = topLevelClassName;
 
-    value isInObject => inObject.last else true;
-    value isInArray => !isInObject;
-    value isObjectInArray => (inObject.size > 1) then !(inObject.exceptLast.last else true) else false;
-    value isObjectNotCaptured => arrayDepth > classCapturedInArray;
-    void captureObject() => classCapturedInArray++;
+    value isObjectLevel => level.last else true;
+    value isArrayLevel => !isObjectLevel;
+    value isObjectInArray => (level.size > 1) then !(level.exceptLast.last else true) else false;
+    variable Integer needToCaptureClasses = 0;
+    value isNeedToCapture => needToCaptureClasses > 0;
+    void needToCapture() => needToCaptureClasses++;
+    void captureObject() => needToCaptureClasses--;
     String ckey => currentKey else "";
 
     void clearKey() {
        currentKey = null;
     }
 
-    function capitalize(String str) => "``str[0..0].uppercased````str.rest``";
-    function makeClazzName(String str) => "``str[0..0].uppercased````(str.endsWith("s") then str[1..str.size-2] else str.rest)``";
-    function decapitalize(String str) => "``str[0..0].lowercased````str.rest``";
+    function makeClazzName(String str)
+    => "``str[0..0].uppercased````(str.endsWith("s") then str[1..str.size-2] else str.rest)``";
 
-    function newFile(String clazzName) {
-        value printState = PrintState(clazzName, StringBuilder(), false);
+    function newPrintState(String clazzName) {
+        value printState = PrintState(clazzName);
         printState.builder.append("shared class ``clazzName``(");
         return printState;
     }
 
-    // SUPER LOGGER
-    value log = process.writeLine;
-
     void push(Boolean isObject) {
-        if(!isObjectNotCaptured, isObjectInArray) {
-            return;
-        }
-        if(isObject) {
+
+        if(level.empty, state.empty) {
             value clazzName = makeClazzName(ckey);
             log("state [] new printState: ``clazzName``");
-            state.add(newFile(clazzName));
-            entityStart = true;
-        } else {
-            arrayDepth++;
+            state.add(newPrintState(clazzName));
+            level.push(isObject);
+            startEntity = true;
+            return;
         }
-        inObject.push(isObject);
-        entityStart = true;
-        log("state [] printState: ``state.size``, inObject: ``inObject.size``");
+
+        assert(exists lastLevel = level.last);
+        switch([lastLevel, isObject])
+        case([true, true]) {
+            value clazzName = makeClazzName(ckey);
+            log("state [] new printState: ``clazzName``");
+            state.add(newPrintState(clazzName));
+        }
+        case([true, false]) {
+            needToCapture();
+        }
+        case([false, true]) {
+            if(isNeedToCapture) {
+                value clazzName = makeClazzName(ckey);
+                log("state [] new printState: ``clazzName``");
+                state.add(newPrintState(clazzName));
+            } else {
+                state.add(fakePrintState);
+            }
+        }
+        case([false, false]) {
+        }
+        else {
+            "Unbelievable"
+            assert(false);
+        }
+        level.push(isObject);
+        startEntity = true;
+        log("state [] printState: ``state.size``, level: ``level.size``");
     }
 
     void pop() {
-        if(!isObjectNotCaptured, isObjectInArray) {
-            return;
+        assert(exists curLevel = level.last,
+               exists printState = state.last);
+
+        value prevLevel = level.exceptLast.last else true;
+
+        switch([prevLevel, curLevel])
+        case([true, true]) {
+            files.put(printState.file, printState.builder.string);
+            state.pop();
         }
-        if(exists isObject = inObject.pop(),
-            exists printState = state.last) {
-            if(isObject) {
+        case([true, false]) {
+            log("DISABLE OMIT PRINT");
+            printState.omitPrint = false;
+        }
+        case([false, true]) {
+            if(isNeedToCapture){
                 files.put(printState.file, printState.builder.string);
+                captureObject();
                 state.pop();
-                if(isObjectNotCaptured){
-                    log("ENABLE OMIT PRINT");
-                    if(exists printState2 = state.last){
-                        printState2.ommitPrint = true;
-                    }
-                    captureObject();
+                log("ENABLE OMIT PRINT");
+                if(exists printState2 = state.last){
+                    printState2.omitPrint = true;
                 }
             } else {
-                arrayDepth--;
-                classCapturedInArray--;
-                log("DISABLE OMIT PRINT");
-                printState.ommitPrint = false;
+                state.pop();
             }
         }
-        log("state [] printState: ``state.size``, inObject: ``inObject.size``");
+        case([false, false]) {
+        }
+        else {
+            "Unbelievable"
+            assert(false);
+        }
+        level.pop();
+        log("state [] printState: ``state.size``, level: ``level.size``");
     }
 
 
     void print(String string) {
-        if(exists printState = state.last,
-            !printState.ommitPrint) {
-            log("print >> \"``string``\"");//, isCurrentInArray=``isObjectInArray``, arrayDepth=``arrayDepth``, classCapturedInArray=``classCapturedInArray``");
-        printState.builder.append(string);
+        if(exists printState = state.last, !printState.omitPrint) {
+            log("print >> \"``string``\"");
+            printState.builder.append(string);
+        }
     }
-}
 
     void printIndent() => print("    ");
 
     void printBreakline() => print("\n");
 
     void printField(String string) {
-        if(isInArray) {
+        if(isArrayLevel) {
             print("{``string``*} ``ckey``");
         }  else  {
             print("``string`` ``ckey``");
         }
     }
 
-
     "adds comma separators"
     void printFormat() {
-        if(isInObject, entityStart){
+        if(isObjectLevel, startEntity){
             printBreakline();
             printIndent();
-            entityStart = false;
-        } else if(isInArray, entityStart) {
-            entityStart = false;
+            startEntity = false;
+        } else if(isArrayLevel, startEntity) {
+            startEntity = false;
         } else {
             print(",");
             printBreakline();
@@ -143,19 +182,6 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
         printBreakline();
         print(") {}");
         pop();
-        // variable Boolean captured = false;
-        // if(!isObjectInArray) {
-        //     pop();
-        // }
-        // if(isObjectInArray, isObjectNotCaptured) {
-        //     classCapturedInArray++;
-        //     captured = true;
-        //     pop();
-        // }
-        // if(captured, exists printState = state.last) {
-        //     log("ENABLE OMIT PRINT");
-        //     printState.ommitPrint = true;
-        // }
     }
 
     shared actual void onStartArray(){
