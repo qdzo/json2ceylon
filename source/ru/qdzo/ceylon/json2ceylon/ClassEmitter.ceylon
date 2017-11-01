@@ -284,7 +284,7 @@ shared void cmd() {
     assert(exists inputFileName = process.namedArgumentValue("inputfile"));
 
     "Output dir should be given: -outdir=path/to/dir"
-    assert(exists outDirName = process.namedArgumentValue("outDir"));
+    assert(exists outDirName = process.namedArgumentValue("outdir"));
 
     "Input file should exists: ``inputFileName``"
     assert(is File inputFile = parsePath(inputFileName).resource);
@@ -299,8 +299,12 @@ shared void cmd() {
     visit(obj, classEmitter);
 
     classEmitter.files.each((clazzName -> classContent) {
-        if(is Nil outFile = outDir.childResource("``clazzName``.ceylon").linkedResource) {
-            outFile.createFile().Overwriter().write(classContent);
+        if(is Nil|File outFile = outDir.childResource("``clazzName``.ceylon").linkedResource) {
+            print("[``clazzName``");
+            print(classContent);
+            switch(outFile)
+            case (is Nil) { outFile.createFile().Overwriter().write(classContent);}
+            case (is File) { outFile.Overwriter().write(classContent);}
             print("File: ``outFile.path`` created!");
         }
     });
