@@ -16,7 +16,7 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
     ArrayList<PrintState> state = ArrayList<PrintState>{};
     shared MutableMap<String, String> files = HashMap<String, String>{};
 
-    variable Boolean objectOrArrayStart = true;
+    variable Boolean entityStart = true;
     ArrayList<Boolean> inObject = ArrayList<Boolean>{};
     variable Integer arrayDepth = 0;
     variable Integer classCapturedInArray = 0;
@@ -24,8 +24,9 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
 
     value isInObject => inObject.last else true;
     value isInArray => !isInObject;
-    value isCurrentInArray => (inObject.size > 1) then !(inObject.exceptLast.last else true) else false;
+    value isObjectInArray => (inObject.size > 1) then !(inObject.exceptLast.last else true) else false;
     value isObjectNotCaptured => arrayDepth > classCapturedInArray;
+    void captureObject() => classCapturedInArray++;
     String ckey => currentKey else "";
 
     void clearKey() {
@@ -46,43 +47,61 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
     value log = process.writeLine;
 
     void push(Boolean isObject) {
+        if(!isObjectNotCaptured, isObjectInArray) {
+            return;
+        }
         if(isObject) {
-            value clazzName = makeClazzName(currentKey else "");
-            log("state <> new printState: ``clazzName``");
+            value clazzName = makeClazzName(ckey);
+            log("state [] new printState: ``clazzName``");
             state.add(newFile(clazzName));
-            objectOrArrayStart = true;
+            entityStart = true;
+        } else {
+            arrayDepth++;
         }
         inObject.push(isObject);
-        log("state <>  printState: ``state.size``, inObject: ``inObject.size``");
+        entityStart = true;
+        log("state [] printState: ``state.size``, inObject: ``inObject.size``");
     }
 
     void pop() {
-        if(exists isObject = inObject.pop(),
-            isObject,
-            exists printState = state.pop()){
-            files.put(printState.file, printState.builder.string);
+        if(!isObjectNotCaptured, isObjectInArray) {
+            return;
         }
-        log("state ->  printState: ``state.size``, inObject: ``inObject.size``");
+        if(exists isObject = inObject.pop(),
+            exists printState = state.last) {
+            if(isObject) {
+                files.put(printState.file, printState.builder.string);
+                state.pop();
+                if(isObjectNotCaptured){
+                    log("ENABLE OMIT PRINT");
+                    if(exists printState2 = state.last){
+                        printState2.ommitPrint = true;
+                    }
+                    captureObject();
+                }
+            } else {
+                arrayDepth--;
+                classCapturedInArray--;
+                log("DISABLE OMIT PRINT");
+                printState.ommitPrint = false;
+            }
+        }
+        log("state [] printState: ``state.size``, inObject: ``inObject.size``");
     }
 
 
     void print(String string) {
         if(exists printState = state.last,
             !printState.ommitPrint) {
-            log("print >> \"``string``\"");//, isCurrentInArray=``isCurrentInArray``, arrayDepth=``arrayDepth``, classCapturedInArray=``classCapturedInArray``");
+            log("print >> \"``string``\"");//, isCurrentInArray=``isObjectInArray``, arrayDepth=``arrayDepth``, classCapturedInArray=``classCapturedInArray``");
         printState.builder.append(string);
     }
-    //        if((isCurrentInArray && arrayDepth > classCapturedInArray)
-        //        || (!isCurrentInArray && arrayDepth == classCapturedInArray)) {
-        //
-        //            log("string=``string``, isCurrentInArray=``isCurrentInArray``, arrayDepth=``arrayDepth``, classCapturedInArray=``classCapturedInArray``");
-        //        }
 }
 
-    void indent() => print("    ");
-//    void printArrayValue(String string) => print("{``string``*} ``ckey``");
+    void printIndent() => print("    ");
 
     void printBreakline() => print("\n");
+
     void printField(String string) {
         if(isInArray) {
             print("{``string``*} ``ckey``");
@@ -93,34 +112,25 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
 
 
     "adds comma separators"
-    void emitValue() {
-        if(isInObject, objectOrArrayStart){
+    void printFormat() {
+        if(isInObject, entityStart){
             printBreakline();
-            indent();
-            objectOrArrayStart = false;
-        } else if(isInArray, objectOrArrayStart) {
-            objectOrArrayStart = false;
+            printIndent();
+            entityStart = false;
+        } else if(isInArray, entityStart) {
+            entityStart = false;
         } else {
             print(",");
             printBreakline();
-            indent();
+            printIndent();
         }
     }
 
-    "Prints an `Object`"
     shared actual void onStartObject(){
         log("event -> onStartObject");
-//        emitValue();
-        if(exists ck = currentKey) {
-            if(isInObject) {
-                printField(makeClazzName(ck));
-                push { isObject = true; };
-            } else if(isObjectNotCaptured) {
-                printField(makeClazzName(ck));
-                push { isObject = true; };
-            }
-            currentKey = null;
-        }
+        printField(makeClazzName(ckey));
+        push(true);
+        clearKey();
     }
 
     shared actual void onKey(String key) {
@@ -132,64 +142,57 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
         log("event -> onEndObject");
         printBreakline();
         print(") {}");
-        variable Boolean captured = false;
-        if(!isCurrentInArray) {
-            pop();
-        }
-        if(isCurrentInArray, isObjectNotCaptured) {
-            classCapturedInArray++;
-            captured = true;
-            pop();
-        }
-        if(captured, exists printState = state.last) {
-            log("ENABLE OMIT PRINT");
-            printState.ommitPrint = true;
-        }
+        pop();
+        // variable Boolean captured = false;
+        // if(!isObjectInArray) {
+        //     pop();
+        // }
+        // if(isObjectInArray, isObjectNotCaptured) {
+        //     classCapturedInArray++;
+        //     captured = true;
+        //     pop();
+        // }
+        // if(captured, exists printState = state.last) {
+        //     log("ENABLE OMIT PRINT");
+        //     printState.ommitPrint = true;
+        // }
     }
 
     shared actual void onStartArray(){
         log("event -> onStartArray");
-        emitValue();
-        objectOrArrayStart = true;
-        push { isObject = false; };
-        arrayDepth++;
+        printFormat();
+        push(false);
     }
 
     shared actual void onEndArray() {
         log("event -> onEndArray");
-        arrayDepth--;
-        classCapturedInArray--;
         pop();
-        if(exists printState = state.last) {
-            log("DISABLE OMIT PRINT");
-            printState.ommitPrint = false;
-        }
     }
 
     shared actual void onString(String s){
         log("event -> onString");
-        emitValue();
+        printFormat();
         printField("String");
         clearKey();
     }
 
     shared actual void onNumber(Integer|Float n) {
         log("event -> onNumber");
-        emitValue();
+        printFormat();
         printField(if(is Integer n) then "Integer" else "Float");
         clearKey();
     }
 
     shared actual void onBoolean(Boolean v) {
         log("event -> onBoolean");
-        emitValue();
+        printFormat();
         printField("Boolean");
         clearKey();
     }
 
     shared actual void onNull() {
         log("event -> onNull");
-        emitValue();
+        printFormat();
         printField("Nothing");
         clearKey();
     }
