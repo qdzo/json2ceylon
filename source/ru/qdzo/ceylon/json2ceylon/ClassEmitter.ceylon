@@ -9,9 +9,17 @@ import ceylon.json {
     parse,
     visit
 }
+import ceylon.file {
+    File,
+    parsePath,
+    Directory,
+    lines,
+    Nil
+}
 
 // SUPER LOGGER
 Anything(String) log = process.writeLine;
+// Anything(String) log = noop;
 
 shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
 
@@ -267,3 +275,34 @@ shared void run(){
     print(classEmitter.files);
 }
 
+
+shared void cmd() {
+    "Class name should be given for the root class: -classname=ClassName"
+    assert(exists clazzName = process.namedArgumentValue("classname"));
+
+    "Input file should be given: -inputfile=file.json"
+    assert(exists inputFileName = process.namedArgumentValue("inputfile"));
+
+    "Output dir should be given: -outdir=path/to/dir"
+    assert(exists outDirName = process.namedArgumentValue("outDir"));
+
+    "Input file should exists: ``inputFileName``"
+    assert(is File inputFile = parsePath(inputFileName).resource);
+
+    "Output dir should exists: ``outDirName``"
+    assert(is Directory outDir = parsePath(outDirName).resource);
+
+    String fileContent = "\n".join(lines(inputFile));
+
+    assert(is JsonObject obj = parse(fileContent));
+    value classEmitter = ClassEmitter(clazzName);
+    visit(obj, classEmitter);
+
+    classEmitter.files.each((clazzName -> classContent) {
+        if(is Nil outFile = outDir.childResource("``clazzName``.ceylon").linkedResource) {
+            outFile.createFile().Overwriter().write(classContent);
+            print("File: ``outFile.path`` created!");
+        }
+    });
+//    print(classEmitter.files);
+}
