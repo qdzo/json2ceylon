@@ -27,20 +27,21 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
 
     variable Boolean startEntity = true;
     ArrayList<Boolean> level = ArrayList<Boolean>{};
+
     variable String? currentKey = topLevelClassName;
+    String ckey => currentKey else "";
+    void clearKey() {
+        currentKey = null;
+    }
 
     value isObjectLevel => level.last else true;
     value isArrayLevel => !isObjectLevel;
-    value isObjectInArray => (level.size > 1) then !(level.exceptLast.last else true) else false;
+
     variable Integer needToCaptureClasses = 0;
     value isNeedToCapture => needToCaptureClasses > 0;
     void needToCapture() => needToCaptureClasses++;
-    void captureObject() => needToCaptureClasses--;
-    String ckey => currentKey else "";
+    void captureClass() => needToCaptureClasses--;
 
-    void clearKey() {
-       currentKey = null;
-    }
 
     function makeClazzName(String str)
     => "``str[0..0].uppercased````(str.endsWith("s") then str[1..str.size-2] else str.rest)``";
@@ -110,7 +111,7 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
         case([false, true]) {
             if(isNeedToCapture){
                 files.put(printState.file, printState.builder.string);
-                captureObject();
+                captureClass();
                 state.pop();
                 log("ENABLE OMIT PRINT");
                 if(exists printState2 = state.last){
@@ -167,6 +168,7 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
 
     shared actual void onStartObject(){
         log("event -> onStartObject");
+        printFormat();
         printField(makeClazzName(ckey));
         push(true);
         clearKey();
@@ -237,7 +239,11 @@ shared void run(){
                              "type" : "cat",
                              "name" : "Murzik"
                             }
-                        ]
+                        ],
+                        "adress": {
+                            "street" : "Gagarin",
+                            "buildNumber": 55
+                        }
                      }""";
 //    String json = """ {
 //                        "name": "Vitaly",
