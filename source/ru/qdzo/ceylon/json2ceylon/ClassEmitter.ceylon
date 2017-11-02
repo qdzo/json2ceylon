@@ -18,8 +18,8 @@ import ceylon.file {
 }
 
 // SUPER LOGGER
-Anything(String) log = process.writeLine;
-// Anything(String) log = noop;
+Anything(String) log
+        = if(process.namedArgumentPresent("d")) then process.writeLine else noop;
 
 shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
 
