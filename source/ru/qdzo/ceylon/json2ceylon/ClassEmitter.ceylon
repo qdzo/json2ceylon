@@ -306,15 +306,17 @@ shared void run() {
     value classEmitter = ClassEmitter(clazzName);
     visit(obj, classEmitter);
 
-    classEmitter.files.each((clazzName -> classContent) {
+    classEmitter.classes.each((clazzName -> classContent) {
         if(is Nil|File outFile = outDir.childResource("``clazzName``.ceylon").linkedResource) {
-            print("[``clazzName``");
-            print(classContent);
-            switch(outFile)
-            case (is Nil) { outFile.createFile().Overwriter().write(classContent);}
-            case (is File) { outFile.Overwriter().write(classContent);}
+            log("[``clazzName``]");
+            log(classContent);
+            File createFileInNotExists() => switch(outFile)
+                case (is Nil)  outFile.createFile()
+                case (is File)  outFile;
+            try(writer = createFileInNotExists().Overwriter()) {
+                writer.write(classContent);
+            }
             print("File: ``outFile.path`` created!");
         }
     });
-//    print(classEmitter.files);
 }
