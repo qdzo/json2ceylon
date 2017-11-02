@@ -54,8 +54,8 @@ shared class ClassEmitter(String topLevelClassName, Boolean serializable) satisf
 
 
     function makeClazzName(String str)
-    => "``str[0..0].uppercased````(str.endsWith("s") then str[1..str.size-2] else str.rest)``";
-    function makeFieldName(String str) => "``str[0..0].lowercased````str.rest``";
+            => str[0..0].uppercased + (str.endsWith("s") then str[1..str.size-2] else str.rest);
+    function makeFieldName(String str) => str[0..0].lowercased + str.rest;
 
     function newPrintState(String clazzName) {
         value printState = PrintState(clazzName);
