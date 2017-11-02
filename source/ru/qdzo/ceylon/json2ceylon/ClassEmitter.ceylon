@@ -26,14 +26,27 @@ shared class ClassEmitter(String topLevelClassName, Boolean serializable) satisf
 
     class PrintState(shared String file,
         shared StringBuilder builder = StringBuilder(),
-        shared variable Boolean omitPrint = false
+        shared variable Boolean enabled = true
     ) {}
-    value fakePrintState = PrintState{ file = ""; omitPrint = true; };
+    value fakePrintState = PrintState{ file = ""; enabled = false; };
 
     MutableMap<String, String> _classes = HashMap<String, String>{};
     shared Map<String, String> classes => _classes;
 
     ArrayList<PrintState> state = ArrayList<PrintState>{};
+
+    void disablePrint() {
+        if(exists printState = state.last) {
+            printState.enabled = false;
+        }
+    }
+
+    void enablePrint() {
+        if(exists printState = state.last) {
+            printState.enabled = true;
+        }
+    }
+
     ArrayList<Boolean> level = ArrayList<Boolean>{};
 
     variable Boolean startEntity = true;
@@ -117,18 +130,18 @@ shared class ClassEmitter(String topLevelClassName, Boolean serializable) satisf
             state.pop();
         }
         case([true, false]) {
-            log("DISABLE OMIT PRINT");
-            printState.omitPrint = false;
+            if(!isNeedToCapture) {
+                log("ENABLE PRINT");
+                enablePrint();
+            }
         }
         case([false, true]) {
             if(isNeedToCapture){
                 _classes.put(printState.file, printState.builder.string);
                 captureClass();
                 state.pop();
-                log("ENABLE OMIT PRINT");
-                if(exists printState2 = state.last){
-                    printState2.omitPrint = true;
-                }
+                log("DISABLE PRINT");
+                disablePrint();
             } else {
                 state.pop();
             }
@@ -145,7 +158,7 @@ shared class ClassEmitter(String topLevelClassName, Boolean serializable) satisf
 
 
     void print(String string) {
-        if(exists printState = state.last, !printState.omitPrint) {
+        if(exists printState = state.last, printState.enabled) {
             log("print >> \"``string``\"");
             printState.builder.append(string);
         }
