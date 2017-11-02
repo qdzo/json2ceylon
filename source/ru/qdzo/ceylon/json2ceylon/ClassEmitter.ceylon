@@ -21,7 +21,7 @@ import ceylon.file {
 Anything(String) log
         = if(process.namedArgumentPresent("d")) then process.writeLine else noop;
 
-shared class ClassEmitter(String topLevelClassName, Boolean serialazable) satisfies Visitor {
+shared class ClassEmitter(String topLevelClassName, Boolean serializable) satisfies Visitor {
 
     class PrintState(shared String file,
         shared StringBuilder builder = StringBuilder(),
@@ -58,8 +58,8 @@ shared class ClassEmitter(String topLevelClassName, Boolean serialazable) satisf
 
     function newPrintState(String clazzName) {
         value printState = PrintState(clazzName);
-        value serialazableAnnotation = serialazable then "serialazable " else "";
-        printState.builder.append("``serialazableAnnotation``shared class ``clazzName``(");
+        value serializableAnnotation = serializable then "serializable\n" else "";
+        printState.builder.append("``serializableAnnotation``shared class ``clazzName``(");
         return printState;
     }
 
@@ -306,9 +306,9 @@ shared void run() {
 
     String fileContent = "\n".join(lines(inputFile));
 
-    Boolean isSerializable => process.namedArgumentPresent("serialazable") then true else false;
+    Boolean isSerializable => process.namedArgumentPresent("serializable") then true else false;
 
-    value classes = generateClasses(fileContent, isSerializable);
+    value classes = generateClasses(fileContent, clazzName, isSerializable);
 
     classes.each((clazzName -> classContent) {
         if(is Nil|File outFile = outDir.childResource("``clazzName``.ceylon").linkedResource) {
