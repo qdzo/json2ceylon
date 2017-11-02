@@ -235,7 +235,7 @@ shared class ClassEmitter(String topLevelClassName, Boolean serialazable) satisf
     shared actual void onNull() {
         log("event -> onNull");
         printFormat();
-        printField("Nothing");
+        printField("String?"); // assume that field is string
         clearKey();
     }
 }
