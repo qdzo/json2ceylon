@@ -54,6 +54,7 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
 
     function makeClazzName(String str)
     => "``str[0..0].uppercased````(str.endsWith("s") then str[1..str.size-2] else str.rest)``";
+    function makeFieldName(String str) => "``str[0..0].lowercased````str.rest``";
 
     function newPrintState(String clazzName) {
         value printState = PrintState(clazzName);
@@ -153,10 +154,12 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
     void printBreakline() => print("\n");
 
     void printField(String string) {
+        value clazz = makeClazzName(string);
+        value field = makeFieldName(ckey);
         if(isArrayLevel) {
-            print("{``string``*} ``ckey``");
+            print("{``clazz``*} ``field``");
         }  else  {
-            print("``string`` ``ckey``");
+            print("``clazz`` ``field``");
         }
     }
 
@@ -178,7 +181,7 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
     shared actual void onStartObject(){
         log("event -> onStartObject");
         printFormat();
-        printField(makeClazzName(ckey));
+        printField(ckey);
         push(true);
         clearKey();
     }
