@@ -14,12 +14,13 @@ import ceylon.file {
     parsePath,
     Directory,
     lines,
-    Nil
+    Nil,
+    createFileIfNil
 }
 
 // SUPER LOGGER
 Anything(String) log
-        = if(process.namedArgumentPresent("d")) then process.writeLine else noop;
+        = process.namedArgumentPresent("d") then process.writeLine else noop;
 
 shared class ClassEmitter(String topLevelClassName, Boolean serializable) satisfies Visitor {
 
@@ -311,16 +312,14 @@ shared void run() {
     value classes = generateClasses(fileContent, clazzName, isSerializable);
 
     classes.each((clazzName -> classContent) {
-        if(is Nil|File outFile = outDir.childResource("``clazzName``.ceylon").linkedResource) {
+        if(is Nil|File resource = outDir.childResource("``clazzName``.ceylon").linkedResource) {
             log("[``clazzName``]");
             log(classContent);
-            File createFileInNotExists() => switch(outFile)
-                case (is Nil)  outFile.createFile()
-                case (is File)  outFile;
-            try(writer = createFileInNotExists().Overwriter()) {
+            File outFile = createFileIfNil(resource);
+            try(writer = outFile.Overwriter()) {
                 writer.write(classContent);
+                print("File: ``outFile.path`` created!");
             }
-            print("File: ``outFile.path`` created!");
         }
     });
 }
