@@ -21,7 +21,7 @@ import ceylon.file {
 Anything(String) log
         = if(process.namedArgumentPresent("d")) then process.writeLine else noop;
 
-shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
+shared class ClassEmitter(String topLevelClassName, Boolean serialazable) satisfies Visitor {
 
     class PrintState(shared String file,
         shared StringBuilder builder = StringBuilder(),
@@ -58,7 +58,8 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
 
     function newPrintState(String clazzName) {
         value printState = PrintState(clazzName);
-        printState.builder.append("shared class ``clazzName``(");
+        value serialazableAnnotation = serialazable then "serialazable " else "";
+        printState.builder.append("``serialazableAnnotation``shared class ``clazzName``(");
         return printState;
     }
 
@@ -278,10 +279,10 @@ shared void test(){
     print(files);
 }
 
-shared Map<String,String> generateClasses(String jsonString, String rootClassName) {
+shared Map<String,String> generateClasses(String jsonString, String rootClassName, Boolean serialazable = false) {
     "Json should have toplevel json-object"
     assert(is JsonObject obj = parse(jsonString));
-    value classEmitter = ClassEmitter(rootClassName);
+    value classEmitter = ClassEmitter(rootClassName, serialazable);
     visit(obj, classEmitter);
     return classEmitter.classes;
 }
@@ -305,11 +306,11 @@ shared void run() {
 
     String fileContent = "\n".join(lines(inputFile));
 
-    assert(is JsonObject obj = parse(fileContent));
-    value classEmitter = ClassEmitter(clazzName);
-    visit(obj, classEmitter);
+    Boolean isSerializable => process.namedArgumentPresent("serialazable") then true else false;
 
-    classEmitter.classes.each((clazzName -> classContent) {
+    value classes = generateClasses(fileContent, isSerializable);
+
+    classes.each((clazzName -> classContent) {
         if(is Nil|File outFile = outDir.childResource("``clazzName``.ceylon").linkedResource) {
             log("[``clazzName``]");
             log(classContent);
