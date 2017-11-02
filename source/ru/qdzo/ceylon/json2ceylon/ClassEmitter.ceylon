@@ -158,9 +158,9 @@ shared class ClassEmitter(String topLevelClassName, Boolean serializable) satisf
         value clazz = makeClazzName(string);
         value field = makeFieldName(ckey);
         if(isArrayLevel) {
-            print("{``clazz``*} ``field``");
+            print("shared {``clazz``*} ``field``");
         }  else  {
-            print("``clazz`` ``field``");
+            print("shared ``clazz`` ``field``");
         }
     }
 
