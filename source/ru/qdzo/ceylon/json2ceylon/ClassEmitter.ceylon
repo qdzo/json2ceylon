@@ -9,18 +9,10 @@ import ceylon.json {
     parse,
     visit
 }
-import ceylon.file {
-    File,
-    parsePath,
-    Directory,
-    lines,
-    Nil,
-    createFileIfNil
-}
 
 // SUPER LOGGER
 Anything(String) log
-        = process.namedArgumentPresent("d") then process.writeLine else noop;
+        = ifArg("debug", "d") then process.writeLine else noop;
 
 shared class ClassEmitter(String topLevelClassName, Boolean serializable) satisfies Visitor {
 
@@ -258,85 +250,15 @@ shared class ClassEmitter(String topLevelClassName, Boolean serializable) satisf
     }
 }
 
-shared void test(){
-    String json = """ {
-                        "name": "Vitaly",
-                        "age": 30,
-                        "pets": [
-                            {
-                             "type" : "dog",
-                             "name" : "Baks"
-                            },
-                            {
-                             "type" : "cat",
-                             "name" : "Murzik"
-                            }
-                        ],
-                        "adress": {
-                            "street" : "Gagarin",
-                            "buildNumber": 55
-                        }
-                     }""";
-//    String json = """ {
-//                        "name": "Vitaly",
-//                        "age": 30
-//                     }""";
-//    String json = """ {
-//                        "pets": [
-//                                    {
-//                                        "name":"Baks"
-//                                    },
-//                                    {
-//                                        "name":"Baks"
-//                                    }
-//                                ],
-//                        "name": "Peter Parker"
-//                     }""";
-
-    value files = generateClasses(json, "Person");
-    print(files);
-}
-
-shared Map<String,String> generateClasses(String jsonString, String rootClassName, Boolean serialazable = false) {
+shared
+Map<String,String> generateClasses(
+        String jsonString,
+        String rootClassName,
+        Boolean serialazable = false) {
+    
     "Json should have toplevel json-object"
     assert(is JsonObject obj = parse(jsonString));
     value classEmitter = ClassEmitter(rootClassName, serialazable);
     visit(obj, classEmitter);
     return classEmitter.classes;
-}
-
-
-shared void run() {
-    "Class name should be given for the root class: -classname=ClassName"
-    assert(exists clazzName = process.namedArgumentValue("classname"));
-
-    "Input file should be given: -inputfile=file.json"
-    assert(exists inputFileName = process.namedArgumentValue("inputfile"));
-
-    "Output dir should be given: -outdir=path/to/dir"
-    assert(exists outDirName = process.namedArgumentValue("outdir"));
-
-    "Input file should exists: ``inputFileName``"
-    assert(is File inputFile = parsePath(inputFileName).resource);
-
-    "Output dir should exists: ``outDirName``"
-    assert(is Directory outDir = parsePath(outDirName).resource);
-
-    String fileContent = "\n".join(lines(inputFile));
-
-    Boolean isSerializable => process.namedArgumentPresent("serializable") then true else false;
-
-    value classes = generateClasses(fileContent, clazzName, isSerializable);
-
-    classes.each((clazzName -> classContent) {
-        if(is Nil|File resource = outDir.childResource("``clazzName``.ceylon").linkedResource) {
-            log("[``clazzName``]");
-            log(classContent);
-            File outFile = createFileIfNil(resource);
-            try(writer = outFile.Overwriter()) {
-                writer.write(classContent);
-                print("File: ``outFile.path`` created!");
-            }
-        }
-    });
 }
