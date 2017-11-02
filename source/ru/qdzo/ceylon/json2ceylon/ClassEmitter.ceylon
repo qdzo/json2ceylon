@@ -27,14 +27,15 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
         shared StringBuilder builder = StringBuilder(),
         shared variable Boolean omitPrint = false
     ) {}
-
     value fakePrintState = PrintState{ file = ""; omitPrint = true; };
 
+    MutableMap<String, String> _classes = HashMap<String, String>{};
+    shared Map<String, String> classes => _classes;
+
     ArrayList<PrintState> state = ArrayList<PrintState>{};
-    shared MutableMap<String, String> files = HashMap<String, String>{};
+    ArrayList<Boolean> level = ArrayList<Boolean>{};
 
     variable Boolean startEntity = true;
-    ArrayList<Boolean> level = ArrayList<Boolean>{};
 
     variable String? currentKey = topLevelClassName;
     String ckey => currentKey else "";
@@ -109,7 +110,7 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
 
         switch([prevLevel, curLevel])
         case([true, true]) {
-            files.put(printState.file, printState.builder.string);
+            _classes.put(printState.file, printState.builder.string);
             state.pop();
         }
         case([true, false]) {
@@ -118,7 +119,7 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
         }
         case([false, true]) {
             if(isNeedToCapture){
-                files.put(printState.file, printState.builder.string);
+                _classes.put(printState.file, printState.builder.string);
                 captureClass();
                 state.pop();
                 log("ENABLE OMIT PRINT");
@@ -278,7 +279,7 @@ shared Map<String,String> generateClasses(String jsonString, String rootClassNam
     assert(is JsonObject obj = parse(jsonString));
     value classEmitter = ClassEmitter(rootClassName);
     visit(obj, classEmitter);
-    return classEmitter.files;
+    return classEmitter.classes;
 }
 
 
