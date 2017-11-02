@@ -234,7 +234,7 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
     }
 }
 
-shared void run(){
+shared void test(){
     String json = """ {
                         "name": "Vitaly",
                         "age": 30,
@@ -269,14 +269,20 @@ shared void run(){
 //                        "name": "Peter Parker"
 //                     }""";
 
-    assert(is JsonObject obj = parse(json));
-    value classEmitter = ClassEmitter("Person");
+    value files = generateClasses(json, "Person");
+    print(files);
+}
+
+shared Map<String,String> generateClasses(String jsonString, String rootClassName) {
+    "Json should have toplevel json-object"
+    assert(is JsonObject obj = parse(jsonString));
+    value classEmitter = ClassEmitter(rootClassName);
     visit(obj, classEmitter);
-    print(classEmitter.files);
+    return classEmitter.files;
 }
 
 
-shared void cmd() {
+shared void run() {
     "Class name should be given for the root class: -classname=ClassName"
     assert(exists clazzName = process.namedArgumentValue("classname"));
 
