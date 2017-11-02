@@ -192,6 +192,7 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
         log("event -> onEndObject");
         printBreakline();
         print(") {}");
+        printBreakline();
         pop();
     }
 
