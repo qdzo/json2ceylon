@@ -1,12 +1,3 @@
-import ceylon.file {
-    File,
-    parsePath,
-    Directory,
-    lines,
-    Nil,
-    createFileIfNil
-}
-
 Boolean ifArg(String* args)
         => args.any(process.namedArgumentPresent);
 
@@ -18,6 +9,7 @@ shared void run() {
         help();
         return;
     }
+
     "Class name should be given for the root class: --classname=ClassName of -c ClassName"
     assert(exists clazzName = argVal("classname", "c"));
 
@@ -27,35 +19,16 @@ shared void run() {
     "Output dir should be given: --outdir=path/to/dir or -o path/to/dir"
     assert(exists outDirName = argVal("outdir", "o"));
 
-    "Input file should exists: ``inputFileName``"
-    assert(is File inputFile = parsePath(inputFileName).resource);
-
-    "Output dir should be dir or not exists"
-    assert(is Nil|Directory resource = parsePath(outDirName).resource);
-
-    Directory outDir = if(is Nil resource)
-            then resource.createDirectory(true) else resource;
-
-    String fileContent = "\n".join(lines(inputFile));
-
-    Boolean isSerializable =
+    Boolean serializable =
             ifArg("serializable", "s") then true else false;
 
-    value classes =
-            generateClasses(fileContent, clazzName, isSerializable);
+    json2ceylon {
+        inputFile = inputFileName;
+        outputDir = outDirName;
+        clazzName = clazzName;
+        serializable = serializable;
+    };
 
-    classes.each((clazzName -> classContent) {
-        if(is Nil|File resource =
-                outDir.childResource("``clazzName``.ceylon").linkedResource) {
-            log("[``clazzName``]");
-            log(classContent);
-            File outFile = createFileIfNil(resource);
-            try(writer = outFile.Overwriter()) {
-                writer.write(classContent);
-                print("File: ``outFile.path`` created!");
-            }
-        }
-    });
 }
 
 
