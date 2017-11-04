@@ -1,0 +1,3 @@
+summary=Generates ceylon classes according to given json
+module=ru.qdzo.ceylon.json2ceylon/0.0.1
+class=ru.qdzo.ceylon.json2ceylon.Json2CeylonTool
