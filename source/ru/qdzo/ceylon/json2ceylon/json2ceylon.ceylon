@@ -13,16 +13,25 @@ import ceylon.json {
 }
 
 shared
-{<String->String>*} generateClasses(
+{<String->{String[2]*}>*} generateClassInfo(
         String jsonString,
-        String rootClassName,
-        Boolean serialazable = false) {
+        String rootClassName) {
 
     "Json should have toplevel json-object"
     assert(is JsonObject obj = parse(jsonString));
     value classEmitter = ClassEmitter(rootClassName);
     visit(obj, classEmitter);
-    return classEmitter.result.map(printClass(serialazable));
+    return classEmitter.result;
+}
+
+shared
+{<String->String>*} generateClasses(
+        String jsonString,
+        String rootClassName,
+        Boolean serialazable = false) {
+
+    return generateClassInfo(jsonString, rootClassName)
+        .map(printClass(serialazable));
 }
 
 shared
