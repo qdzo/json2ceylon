@@ -1,7 +1,5 @@
 import ceylon.collection {
-    ArrayList,
-    MutableMap,
-    HashMap
+    ArrayList
 }
 import ceylon.file {
     parsePath,
@@ -22,69 +20,70 @@ import ceylon.json {
 Anything(String) log
         = ifArg("debug", "d") then process.writeLine else noop;
 
-shared class ClassEmitter(String topLevelClassName, Boolean serializable) satisfies Visitor {
+shared String->String printClass(String->{[String, String]*} classInfo) {
+    value builder = StringBuilder();
+    value className->fields = classInfo;
+    function fieldTemplate(String[2] field) => "shared ``field[0]`` ``field[1]``";
+    builder.append("shared class ``className``(\n   ");
+    builder.append(",\n    ".join(fields.map(fieldTemplate)));
+    builder.append("\n) {}");
+    return className->builder.string;
+}
 
-    class PrintState(shared String file,
-        shared StringBuilder builder = StringBuilder(),
-        shared variable Boolean enabled = true
-    ) {}
-    value fakePrintState = PrintState{ file = ""; enabled = false; };
+String makeClazzName(String str)
+        => str[0..0].uppercased + (str.endsWith("s") then str[1..str.size-2] else str.rest);
+String makeFieldName(String str) => str[0..0].lowercased + str.rest;
 
-    MutableMap<String, String> _classes = HashMap<String, String>{};
-    shared Map<String, String> classes => _classes;
+shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
 
-    ArrayList<PrintState> state = ArrayList<PrintState>{};
+    class ClassInfoCollecttor(className) {
+        variable {[String,String]*} _fields = {};
+        variable Boolean enabled = true;
+        shared String className;
+        shared {[String,String]*} fields => _fields;
 
-    void disablePrint() {
-        if(exists printState = state.last) {
-            printState.enabled = false;
+        shared void disable() => enabled = false;
+        shared void enable() => enabled = true;
+
+        shared default void add(String[2] field){
+            if(enabled) {
+                _fields = _fields.chain { field };
+            }
         }
     }
 
-    void enablePrint() {
-        if(exists printState = state.last) {
-            printState.enabled = true;
-        }
+    object fakeInfoCollector extends ClassInfoCollecttor(""){
+        shared actual void add(String[2] field) => noop();
     }
+
+//    MutableMap<String, {[String,String]*}> _result = HashMap<String, {[String,String]*}>{};
+    variable { <String->{[String,String]*}>*} _result =  {};
+    shared {<String->{[String,String]*}>*} result => _result;
+
+    ArrayList<ClassInfoCollecttor> state = ArrayList<ClassInfoCollecttor>{};
+
 
     ArrayList<Boolean> level = ArrayList<Boolean>{};
 
-    variable Boolean startEntity = true;
-
     variable String? currentKey = topLevelClassName;
     String ckey => currentKey else "";
-    void clearKey() {
-        currentKey = null;
-    }
+    void clearKey() => currentKey = null;
 
     value isObjectLevel => level.last else true;
     value isArrayLevel => !isObjectLevel;
 
-    variable Integer needToCaptureClasses = 0;
-    value isNeedToCapture => needToCaptureClasses > 0;
-    void needToCapture() => needToCaptureClasses++;
-    void captureClass() => needToCaptureClasses--;
-
-
-    function makeClazzName(String str)
-            => str[0..0].uppercased + (str.endsWith("s") then str[1..str.size-2] else str.rest);
-    function makeFieldName(String str) => str[0..0].lowercased + str.rest;
-
-    function newPrintState(String clazzName) {
-        value printState = PrintState(clazzName);
-        value serializableAnnotation = serializable then "serializable\n" else "";
-        printState.builder.append("``serializableAnnotation``shared class ``clazzName``(");
-        return printState;
-    }
+    variable Integer needToCaptureValues = 0;
+    value isNeedToCapture => needToCaptureValues > 0;
+    void needToCapture() => needToCaptureValues++;
+    void captureVal() => needToCaptureValues--;
 
     void push(Boolean isObject) {
 
         if(level.empty, state.empty) {
             value clazzName = makeClazzName(ckey);
-            log("state [] new printState: ``clazzName``");
-            state.add(newPrintState(clazzName));
+            log("state [] new classCollector: ``clazzName``");
+            state.add(ClassInfoCollecttor(clazzName));
             level.push(isObject);
-            startEntity = true;
             return;
         }
 
@@ -92,8 +91,8 @@ shared class ClassEmitter(String topLevelClassName, Boolean serializable) satisf
         switch([lastLevel, isObject])
         case([true, true]) {
             value clazzName = makeClazzName(ckey);
-            log("state [] new printState: ``clazzName``");
-            state.add(newPrintState(clazzName));
+            log("state [] new classCollector: ``clazzName``");
+            state.add(ClassInfoCollecttor(clazzName));
         }
         case([true, false]) {
             needToCapture();
@@ -101,10 +100,10 @@ shared class ClassEmitter(String topLevelClassName, Boolean serializable) satisf
         case([false, true]) {
             if(isNeedToCapture) {
                 value clazzName = makeClazzName(ckey);
-                log("state [] new printState: ``clazzName``");
-                state.add(newPrintState(clazzName));
+                log("state [] new classCollector: ``clazzName``");
+                state.add(ClassInfoCollecttor(clazzName));
             } else {
-                state.add(fakePrintState);
+                state.add(fakeInfoCollector);
             }
         }
         case([false, false]) {
@@ -114,34 +113,33 @@ shared class ClassEmitter(String topLevelClassName, Boolean serializable) satisf
             assert(false);
         }
         level.push(isObject);
-        startEntity = true;
-        log("state [] printState: ``state.size``, level: ``level.size``");
+        log("state [] classCollector: ``state.size``, level: ``level.size``");
     }
 
     void pop() {
         assert(exists curLevel = level.last,
-               exists printState = state.last);
+               exists classCollector = state.last);
 
         value prevLevel = level.exceptLast.last else true;
 
         switch([prevLevel, curLevel])
         case([true, true]) {
-            _classes.put(printState.file, printState.builder.string);
+            _result = _result.chain { classCollector.className->classCollector.fields };
             state.pop();
         }
         case([true, false]) {
             if(!isNeedToCapture) {
                 log("ENABLE PRINT");
-                enablePrint();
+                state.last?.enable();
             }
         }
         case([false, true]) {
             if(isNeedToCapture){
-                _classes.put(printState.file, printState.builder.string);
-                captureClass();
+                _result = _result.chain { classCollector.className->classCollector.fields };
+                captureVal();
                 state.pop();
                 log("DISABLE PRINT");
-                disablePrint();
+                state.last?.disable();
             } else {
                 state.pop();
             }
@@ -153,54 +151,34 @@ shared class ClassEmitter(String topLevelClassName, Boolean serializable) satisf
             assert(false);
         }
         level.pop();
-        log("state [] printState: ``state.size``, level: ``level.size``");
+        log("state [] classCollector: ``state.size``, level: ``level.size``");
     }
 
 
-    void print(String string) {
-        if(exists printState = state.last, printState.enabled) {
-            log("print >> \"``string``\"");
-            printState.builder.append(string);
+    void performAddField(String fieldType, String field) {
+        if(exists classCollector = state.last) {
+            log("performAddField >> \"``string``\"");
+            classCollector.add([fieldType, field]);
         }
     }
 
-    void printIndent() => print("    ");
-
-    void printBreakline() => print("\n");
-
-    void printField(String string) {
-        value clazz = makeClazzName(string);
+    void addField(String fieldType) {
+        value clazz = makeClazzName(fieldType);
         value field = makeFieldName(ckey);
         if(isArrayLevel) {
-            print("shared [``clazz``*] ``field``");
+            performAddField("[``clazz``*]", field);
         }  else  {
-            print("shared ``clazz`` ``field``");
+            performAddField(clazz, field);
         }
         if(isArrayLevel, isNeedToCapture) {
-            captureClass();
-            disablePrint();
-        }
-    }
-
-    "adds comma separators"
-    void printFormat() {
-        if(isObjectLevel, startEntity){
-            printBreakline();
-            printIndent();
-            startEntity = false;
-        } else if(isArrayLevel, startEntity) {
-            startEntity = false;
-        } else {
-            print(",");
-            printBreakline();
-            printIndent();
+            captureVal();
+            state.last?.disable();
         }
     }
 
     shared actual void onStartObject(){
         log("event -> onStartObject");
-        printFormat();
-        printField(ckey);
+        addField(ckey);
         push(true);
         clearKey();
     }
@@ -212,15 +190,11 @@ shared class ClassEmitter(String topLevelClassName, Boolean serializable) satisf
 
     shared actual void onEndObject() {
         log("event -> onEndObject");
-        printBreakline();
-        print(") {}");
-        printBreakline();
         pop();
     }
 
     shared actual void onStartArray(){
         log("event -> onStartArray");
-        printFormat();
         push(false);
     }
 
@@ -231,44 +205,40 @@ shared class ClassEmitter(String topLevelClassName, Boolean serializable) satisf
 
     shared actual void onString(String s){
         log("event -> onString");
-        printFormat();
-        printField("String");
+        addField("String");
         clearKey();
     }
 
     shared actual void onNumber(Integer|Float n) {
         log("event -> onNumber");
-        printFormat();
-        printField(if(is Integer n) then "Integer" else "Float");
+        addField(if(is Integer n) then "Integer" else "Float");
         clearKey();
     }
 
     shared actual void onBoolean(Boolean v) {
         log("event -> onBoolean");
-        printFormat();
-        printField("Boolean");
+        addField("Boolean");
         clearKey();
     }
 
     shared actual void onNull() {
         log("event -> onNull");
-        printFormat();
-        printField("String?"); // assume that field is string
+        addField("String?"); // assume that field is string
         clearKey();
     }
 }
 
 shared
-Map<String,String> generateClasses(
+{<String->String>*} generateClasses(
         String jsonString,
         String rootClassName,
         Boolean serialazable = false) {
     
     "Json should have toplevel json-object"
     assert(is JsonObject obj = parse(jsonString));
-    value classEmitter = ClassEmitter(rootClassName, serialazable);
+    value classEmitter = ClassEmitter(rootClassName);
     visit(obj, classEmitter);
-    return classEmitter.classes;
+    return classEmitter.result.map(printClass);
 }
 
 shared
