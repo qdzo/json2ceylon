@@ -4,3 +4,6 @@ offline=false
 flatclasspath=false
 autoexportmavendependencies=false
 fullyexportmavendependencies=false
+
+[compiler]
+source=source
