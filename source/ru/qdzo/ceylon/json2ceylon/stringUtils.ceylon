@@ -1,7 +1,14 @@
-String indent = "    ";
-
 String fieldTemplate(String[2] field)
         => "shared ``field[0]`` ``field[1]``";
+
+String getterFieldTemplate(String[2] field) {
+    value [type, name] = field;
+    if(type in {"String", "Integer", "Float", "Boolean"}) {
+        return "shared ``type`` ``name`` => jsObj.get``type``(\"``name``\");";
+    } else {
+        return "shared ``type`` ``name`` => ``type``(jsObj.getObject(\"``name``\"));";
+    }
+}
 
 String makeClazzName(String str)
         => str[0..0].uppercased +
