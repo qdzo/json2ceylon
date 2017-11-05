@@ -1,38 +1,9 @@
 import ceylon.collection {
     ArrayList
 }
-import ceylon.file {
-    parsePath,
-    File,
-    Nil,
-    Directory,
-    lines,
-    createFileIfNil
-}
 import ceylon.json {
-    Visitor,
-    JsonObject,
-    parse,
-    visit
+    Visitor
 }
-
-// SUPER LOGGER
-Anything(String) log
-        = ifArg("debug", "d") then process.writeLine else noop;
-
-shared String->String printClass(String->{[String, String]*} classInfo) {
-    value builder = StringBuilder();
-    value className->fields = classInfo;
-    function fieldTemplate(String[2] field) => "shared ``field[0]`` ``field[1]``";
-    builder.append("shared class ``className``(\n   ");
-    builder.append(",\n    ".join(fields.map(fieldTemplate)));
-    builder.append("\n) {}");
-    return className->builder.string;
-}
-
-String makeClazzName(String str)
-        => str[0..0].uppercased + (str.endsWith("s") then str[1..str.size-2] else str.rest);
-String makeFieldName(String str) => str[0..0].lowercased + str.rest;
 
 shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
 
@@ -56,13 +27,10 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
         shared actual void add(String[2] field) => noop();
     }
 
-//    MutableMap<String, {[String,String]*}> _result = HashMap<String, {[String,String]*}>{};
     variable { <String->{[String,String]*}>*} _result =  {};
     shared {<String->{[String,String]*}>*} result => _result;
 
     ArrayList<ClassInfoCollecttor> state = ArrayList<ClassInfoCollecttor>{};
-
-
     ArrayList<Boolean> level = ArrayList<Boolean>{};
 
     variable String? currentKey = topLevelClassName;
@@ -78,7 +46,6 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
     void captureVal() => needToCaptureValues--;
 
     void push(Boolean isObject) {
-
         if(level.empty, state.empty) {
             value clazzName = makeClazzName(ckey);
             log("state [] new classCollector: ``clazzName``");
@@ -124,7 +91,9 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
 
         switch([prevLevel, curLevel])
         case([true, true]) {
-            _result = _result.chain { classCollector.className->classCollector.fields };
+            _result = _result.chain {
+                classCollector.className->classCollector.fields
+            };
             state.pop();
         }
         case([true, false]) {
@@ -135,7 +104,9 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
         }
         case([false, true]) {
             if(isNeedToCapture){
-                _result = _result.chain { classCollector.className->classCollector.fields };
+                _result = _result.chain {
+                    classCollector.className->classCollector.fields
+                };
                 captureVal();
                 state.pop();
                 log("DISABLE PRINT");
@@ -228,51 +199,3 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
     }
 }
 
-shared
-{<String->String>*} generateClasses(
-        String jsonString,
-        String rootClassName,
-        Boolean serialazable = false) {
-    
-    "Json should have toplevel json-object"
-    assert(is JsonObject obj = parse(jsonString));
-    value classEmitter = ClassEmitter(rootClassName);
-    visit(obj, classEmitter);
-    return classEmitter.result.map(printClass);
-}
-
-shared
-void json2ceylon(
-        String inputFile,
-        String outputDir,
-        String clazzName,
-        Boolean serializable = false) {
-
-    "Input file should exists: ``inputFile``"
-    assert(is File jsonFile = parsePath(inputFile).resource);
-
-    "Output dir should be dir or not exists"
-    assert(is Nil|Directory resource = parsePath(outputDir).resource);
-
-    Directory outDir = if(is Nil resource)
-            then resource.createDirectory(true)
-            else resource;
-
-    String fileContent = "\n".join(lines(jsonFile));
-    
-    value classes =
-            generateClasses(fileContent, clazzName, serializable);
-
-    classes.each((clazzName -> classContent) {
-        if(is Nil|File resource =
-                outDir.childResource("``clazzName``.ceylon").linkedResource) {
-            log("[``clazzName``]");
-            log(classContent);
-            File outFile = createFileIfNil(resource);
-            try(writer = outFile.Overwriter()) {
-                writer.write(classContent);
-                print("File: ``outFile.path`` created!");
-            }
-        }
-    });
-}
