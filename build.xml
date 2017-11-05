@@ -18,6 +18,7 @@
     </condition>
     <property name="ceylon.ant.lib" value="${ceylon.home}/lib/ceylon-ant.jar" />
     <property name="source.encoding" value="UTF-8"/>
+    <property name="run.module" value="ru.qdzo.ceylon.json2ceylon"/>
 
     <target name="ceylon-ant-taskdefs">
         <path id="ant-tasks">
@@ -59,4 +60,19 @@
         <delete dir="modules"/>
     </target>
 
+    <target name="install-plugin" depends="compile">
+      <echo>Packing plugin</echo>
+      <exec executable="ceylon">
+        <arg value="plugin" />
+        <arg value="pack" />
+        <arg value="${run.module}" />
+      </exec>
+      <echo>Install plugin</echo>
+      <exec executable="ceylon">
+        <arg value="plugin" />
+        <arg value="install" />
+        <arg value="--force" />
+        <arg value="${run.module}" />
+      </exec>
+    </target>
 </project>
