@@ -141,7 +141,9 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
         }  else  {
             performAddField(clazz, field);
         }
-        if(isArrayLevel, isNeedToCapture) {
+        if(isArrayLevel,
+            isNeedToCapture,
+            fieldType != ckey) { // if fieldType is not new Class
             captureVal();
             state.last?.disable();
         }
