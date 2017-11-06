@@ -12,19 +12,24 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
         variable Boolean enabled = true;
         shared String className;
         shared {[String,String]*} fields => _fields;
-
-        shared void disable() => enabled = false;
-        shared void enable() => enabled = true;
-
+        shared void disable() {
+            log("DISABLE ADDING for ``className``");
+            enabled = false;
+        }
+        shared void enable() {
+            log("ENABLE ADDING for ``className``");
+            enabled = true;
+        }
         shared default void add(String[2] field){
             if(enabled) {
+                log("Add field: ``field`` for class ``className``");
                 _fields = _fields.chain { field };
             }
         }
     }
 
     object fakeInfoCollector extends ClassInfoCollecttor(""){
-        shared actual void add(String[2] field) => noop();
+        shared actual void add(String[2] field) => log("Fake add: ``field``");
     }
 
     variable { <String->{[String,String]*}>*} _result =  {};
@@ -42,8 +47,14 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
 
     variable Integer needToCaptureValues = 0;
     value isNeedToCapture => needToCaptureValues > 0;
-    void needToCapture() => needToCaptureValues++;
-    void captureVal() => needToCaptureValues--;
+    void needToCapture() {
+        log("state [] need to capture value from array");
+        needToCaptureValues++;
+    }
+    void captureVal() {
+        log("state [] val captured from array");
+        needToCaptureValues--;
+    }
 
     void push(Boolean isObject) {
         if(level.empty, state.empty) {
@@ -70,6 +81,7 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
                 log("state [] new classCollector: ``clazzName``");
                 state.add(ClassInfoCollecttor(clazzName));
             } else {
+                log("state [] fakeCollector");
                 state.add(fakeInfoCollector);
             }
         }
@@ -98,7 +110,6 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
         }
         case([true, false]) {
             if(!isNeedToCapture) {
-                log("ENABLE PRINT");
                 state.last?.enable();
             }
         }
@@ -109,7 +120,6 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
                 };
                 captureVal();
                 state.pop();
-                log("DISABLE PRINT");
                 state.last?.disable();
             } else {
                 state.pop();
@@ -126,12 +136,8 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
     }
 
 
-    void performAddField(String fieldType, String field) {
-        if(exists classCollector = state.last) {
-            log("performAddField >> \"``string``\"");
-            classCollector.add([fieldType, field]);
-        }
-    }
+    void performAddField(String fieldType, String field)
+            => state.last?.add([fieldType, field]);
 
     void addField(String fieldType) {
         value clazz = makeClazzName(fieldType);
