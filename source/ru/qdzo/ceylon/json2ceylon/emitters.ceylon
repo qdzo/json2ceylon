@@ -16,7 +16,7 @@ shared String->String emitClass(String->{[String, String]*} classInfo) {
 shared String->String emitExternalizableClass(String->{[String, String]*} classInfo) {
     value b = StringBuilder();
     value className->fields = classInfo;
-    b.append("import ceylon.json { parse, JsonObject }");
+    b.append("import ceylon.json { parse, JsonObject, JsonArray }");
     b.appendNewline();
     b.appendNewline();
     b.append("shared class ``className``(String|JsonObject json) {");
@@ -28,16 +28,16 @@ shared String->String emitExternalizableClass(String->{[String, String]*} classI
     for([type, name] in fields) {
         b.append(indent);
         if(type in {"String", "String?", "Integer", "Float", "Boolean"}) {
-            b.append("assert(is ``type`` _``name`` = jsObj.get``type.replaceFirst("?", "")``OrNull(\"``name``\");");
+            b.append("assert(is ``type`` _``name`` = jsObj.get``type.replaceFirst("?", "")``OrNull(\"``name``\"));");
         }
         else if(type.contains("["), type.containsAny {"String", "String?", "Integer", "Float", "Boolean"}) {
-            b.append("assert(is ``type``* _``name`` = jsObj.getArray((\"``name``\").narrow<``type``>().sequence();");
+            b.append("assert(is ``type`` _``name`` = jsObj.getArray(\"``name``\").narrow<``type[1..type.size-3]``>());");
         }
         else if(type.contains("[")) {
-            b.append("assert(is [JsonObject*] _``name`` = jsObj.getArray((\"``name``\").narrow<JsonObject>().sequence();");
+            b.append("assert(is [JsonObject*] _``name`` = jsObj.getArray(\"``name``\").narrow<JsonObject>());");
         }
         else {
-            b.append("assert(is JsonObject _``name`` = jsObj.getObject((\"``name``\");");
+            b.append("assert(is JsonObject _``name`` = jsObj.getObject(\"``name``\"));");
         }
     }
 
@@ -58,7 +58,32 @@ shared String->String emitExternalizableClass(String->{[String, String]*} classI
         }
     }
     b.appendNewline();
+
+    b.append(indent);
+    b.append("shared JsonObject json => JsonObject {");
+    for([type, name] in fields) {
+        b.append(indent);
+        b.append("    ");
+        if(type in {"String", "String?", "Integer", "Float", "Boolean"}) {
+            b.append("\"``name``\" -> ``name``,");
+        }
+        else if(type.contains("["), type.containsAny {"String", "String?", "Integer", "Float", "Boolean"}) {
+            b.append("\"``name``\" -> JsonArray(``name``),");
+        }
+        else if(type.contains("[")) {
+            b.append("\"``name``\" -> JsonArray(``name``*.json),");
+        }
+        else {
+            b.append("\"``name``\" -> ``name``.json,");
+        }
+    }
+    b.append(indent);
     b.append("}");
+    b.appendNewline();
+
+    b.append("}");
+
+
     return className->b.string;
 }
 
