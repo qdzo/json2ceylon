@@ -5,7 +5,7 @@ import ceylon.json {
     Visitor
 }
 
-shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
+shared class Json2CeylonClassTransformer(String topLevelClassName) satisfies Visitor {
 
     class ClassInfoCollecttor(className) {
         variable {[String,String]*} _fields = {};
@@ -58,7 +58,7 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
 
     void push(Boolean isObject) {
         if(level.empty, state.empty) {
-            value clazzName = makeClazzName(ckey);
+            value clazzName = formatClazzName(ckey);
             log("state [] new classCollector: ``clazzName``");
             state.add(ClassInfoCollecttor(clazzName));
             level.push(isObject);
@@ -68,7 +68,7 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
         assert(exists lastLevel = level.last);
         switch([lastLevel, isObject])
         case([true, true]) {
-            value clazzName = makeClazzName(ckey);
+            value clazzName = formatClazzName(ckey);
             log("state [] new classCollector: ``clazzName``");
             state.add(ClassInfoCollecttor(clazzName));
         }
@@ -77,7 +77,7 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
         }
         case([false, true]) {
             if(isNeedToCapture) {
-                value clazzName = makeClazzName(ckey);
+                value clazzName = formatClazzName(ckey);
                 log("state [] new classCollector: ``clazzName``");
                 state.add(ClassInfoCollecttor(clazzName));
             } else {
@@ -140,8 +140,8 @@ shared class ClassEmitter(String topLevelClassName) satisfies Visitor {
             => state.last?.add([fieldType, field]);
 
     void addField(String fieldType) {
-        value clazz = makeClazzName(fieldType);
-        value field = makeFieldName(ckey);
+        value clazz = formatClazzName(fieldType);
+        value field = formatFieldName(ckey);
         if(isArrayLevel) {
             performAddField("[``clazz``*]", field);
         }  else  {

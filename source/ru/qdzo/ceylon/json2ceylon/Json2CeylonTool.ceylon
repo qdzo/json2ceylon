@@ -17,9 +17,9 @@ shared class Json2CeylonTool() extends CeylonBaseTool() {
     argument__SETTER { multiplicity = "3"; }
     shared variable JList<String>? arguments = null;
 
-    description__SETTER("Add serializable annotation to classes, use `--serializable`")
+    description__SETTER("Create externalizable class with embedded json parser/emitter, use `--serializable`")
     option__SETTER
-    shared variable Boolean serializable = false;
+    shared variable Boolean externalizable = false;
 
     shared actual void run() {
        if(exists v = arguments) {
@@ -27,6 +27,7 @@ shared class Json2CeylonTool() extends CeylonBaseTool() {
                inputFile = v.get(0).string;
                outputDir = v.get(1).string;
                clazzName = v.get(2).string;
+               externalizable = externalizable;
            };
        } else {
            print("Wrong options. Try `ceylon json-2-ceylon --help` for help");
