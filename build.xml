@@ -36,12 +36,6 @@
         </ceylon-compile>
     </target>
 
-    <target name="compile-js" depends="ceylon-ant-taskdefs">
-        <ceylon-compile-js encoding="${source.encoding}">
-            <module name="ru.qdzo.ceylon.json2ceylon"/>
-        </ceylon-compile-js>
-    </target>
-
     <target name="doc" depends="ceylon-ant-taskdefs">
         <ceylon-doc encoding="${source.encoding}">
             <module name="ru.qdzo.ceylon.json2ceylon"/>
@@ -50,10 +44,6 @@
 
     <target name="run" depends="compile">
         <ceylon-run module="ru.qdzo.ceylon.json2ceylon/0.0.1"/>
-    </target>
-
-    <target name="run-js" depends="compile-js">
-        <ceylon-run-js module="ru.qdzo.ceylon.json2ceylon/0.0.1"/>
     </target>
 
     <target name="clean">
