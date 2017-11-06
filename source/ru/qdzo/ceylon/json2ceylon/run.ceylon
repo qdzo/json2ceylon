@@ -19,14 +19,14 @@ shared void run() {
     "Output dir should be given: --outdir=path/to/dir or -o path/to/dir"
     assert(exists outDirName = argVal("outdir", "o"));
 
-    Boolean serializable =
-            ifArg("serializable", "s") then true else false;
+    Boolean externalizable =
+            ifArg("externalizable", "e") then true else false;
 
     json2ceylon {
         inputFile = inputFileName;
         outputDir = outDirName;
         clazzName = clazzName;
-        serializable = serializable;
+        externalizable = externalizable;
     };
 
 }
@@ -37,16 +37,16 @@ void help() {
              json2ceylon - utility, that generates ceylon classes from given json file.
 
              Usage:
-             
-                ceylon run ru.qdzo.ceylon.json2ceylon --classname=ClassName --inputfile=file.json --outdir=gen [-d -s]
+
+                ceylon run ru.qdzo.ceylon.json2ceylon --classname=ClassName --inputfile=file.json --outdir=gen [-d -e]
 
              Available parameters:
 
-               --classname    (-c) - class name of json root object
-               --inputfile    (-f) - file with json content
-               --outdir       (-o) - directory for generated ceylon classes
-               --serializable (-s) - add serializable annotation (usable when classes will be used as interchange format)
-               --debug        (-d) - print debug information
+               --classname      (-c) - class name of json root object
+               --inputfile      (-f) - file with json content
+               --outdir         (-o) - directory for generated ceylon classes
+               --externalizable (-e) - create externalizable class with embedded json parsing/emitting
+               --debug          (-d) - print debug information
              """);
 }
 

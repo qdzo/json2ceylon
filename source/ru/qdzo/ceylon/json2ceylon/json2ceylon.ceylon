@@ -19,7 +19,7 @@ shared
 
     "Json should have toplevel json-object"
     assert(is JsonObject obj = parse(jsonString));
-    value classEmitter = ClassEmitter(rootClassName);
+    value classEmitter = Json2CeylonClassTransformer(rootClassName);
     visit(obj, classEmitter);
     return classEmitter.result;
 }
@@ -28,10 +28,10 @@ shared
 {<String->String>*} generateClasses(
         String jsonString,
         String rootClassName,
-        Boolean serialazable = false) {
+        Boolean externalizable = false) {
 
     return generateClassInfo(jsonString, rootClassName)
-        .map(printClass(serialazable));
+        .map(externalizable then emitExternalizableClass else emitClass);
 }
 
 shared
@@ -39,7 +39,7 @@ void json2ceylon(
         String inputFile,
         String outputDir,
         String clazzName,
-        Boolean serializable = false) {
+        Boolean externalizable = false) {
 
     "Input file should exists: ``inputFile``"
     assert(is File jsonFile = parsePath(inputFile).resource);
@@ -54,7 +54,7 @@ void json2ceylon(
     String fileContent = "\n".join(lines(jsonFile));
 
     value classes =
-            generateClasses(fileContent, clazzName, serializable);
+            generateClasses(fileContent, clazzName, externalizable);
 
     classes.each((clazzName -> classContent) {
         if(is Nil|File resource =
