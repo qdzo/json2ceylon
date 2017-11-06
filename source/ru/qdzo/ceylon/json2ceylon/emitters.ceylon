@@ -60,31 +60,36 @@ shared String->String emitExternalizableClass(String->{[String, String]*} classI
     b.appendNewline();
 
     b.append(indent);
-    b.append("shared JsonObject json => JsonObject {");
-    for([type, name] in fields) {
+    b.append("shared JsonObject toJson => JsonObject {");
+    b.append(indent);
+    b.append("    ");
+    assert(exists [ftype, fname] = fields.first);
+    b.append(fieldToJsonEntry(ftype, fname));
+    for([type, name] in fields.rest) {
+        b.append(",");
         b.append(indent);
         b.append("    ");
-        if(type in {"String", "String?", "Integer", "Float", "Boolean"}) {
-            b.append("\"``name``\" -> ``name``,");
-        }
-        else if(type.contains("["), type.containsAny {"String", "String?", "Integer", "Float", "Boolean"}) {
-            b.append("\"``name``\" -> JsonArray(``name``),");
-        }
-        else if(type.contains("[")) {
-            b.append("\"``name``\" -> JsonArray(``name``*.json),");
-        }
-        else {
-            b.append("\"``name``\" -> ``name``.json,");
-        }
+        b.append(fieldToJsonEntry(type, name));
     }
     b.append(indent);
-    b.append("}");
+    b.append("};");
     b.appendNewline();
-
     b.append("}");
-
-
     return className->b.string;
 }
 
 
+String fieldToJsonEntry(String type,String name) {
+    if(type in {"String", "String?", "Integer", "Float", "Boolean"}) {
+        return "\"``name``\" -> ``name``";
+    }
+    else if(type.contains("["), type.containsAny {"String", "String?", "Integer", "Float", "Boolean"}) {
+        return "\"``name``\" -> JsonArray(``name``)";
+    }
+    else if(type.contains("[")) {
+        return "\"``name``\" -> JsonArray(``name``*.toJson)";
+    }
+    else {
+        return "\"``name``\" -> ``name``.toJson";
+    }
+}
