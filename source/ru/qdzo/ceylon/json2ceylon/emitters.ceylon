@@ -32,7 +32,7 @@ shared String->String emitExternalizableClass(String->{[String, String]*} classI
             b.append("assert(is ``type`` _``name`` = jsObj.get``type``OrNull(\"``name``\"));");
         }
         case(basicOptional) {
-            b.append("``type`` _``name`` = jsObj.get``type.replaceFirst("?", "")``OrNull(\"``name``\"));");
+            b.append("``type`` _``name`` = jsObj.get``type.replaceFirst("?", "")``OrNull(\"``name``\");");
         }
         case(sequenceWithBasic) {
             b.append("assert(is ``type`` _``name`` = jsObj.getArray(\"``name``\").narrow<``type[1..type.size-3]``>());");
