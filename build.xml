@@ -20,13 +20,18 @@
     <property name="source.encoding" value="UTF-8"/>
     <property name="run.module" value="ru.qdzo.ceylon.json2ceylon"/>
 
+
     <target name="ceylon-ant-taskdefs">
-        <path id="ant-tasks">
-            <pathelement location="${ceylon.ant.lib}"/>
-        </path>
-        <typedef resource="com/redhat/ceylon/ant/antlib.xml" classpathref="ant-tasks"/>
+      <path id="ant-tasks">
+        <pathelement location="${ceylon.ant.lib}"/>
+      </path>
+      <typedef resource="com/redhat/ceylon/ant/antlib.xml" classpathref="ant-tasks"/>
+
+      <moduleset id="plugin.modules">
+        <module name="ru.qdzo.ceylon.json2ceylon" version="0.0.1"/>
+      </moduleset>
     </target>
-	
+
     <target name="default" depends="doc, run">
     </target>
 
@@ -34,6 +39,12 @@
         <ceylon-compile encoding="${source.encoding}">
             <module name="ru.qdzo.ceylon.json2ceylon"/>
         </ceylon-compile>
+    </target>
+
+    <target name="publish" depends="compile">
+      <ceylon-copy out="${user.home}/.ceylon/repo">
+        <moduleset refid="plugin.modules"/>
+      </ceylon-copy>
     </target>
 
     <target name="doc" depends="ceylon-ant-taskdefs">
@@ -50,7 +61,7 @@
         <delete dir="modules"/>
     </target>
 
-    <target name="install-plugin" depends="compile">
+    <target name="install-plugin" depends="publish">
       <echo>Packing plugin</echo>
       <exec executable="ceylon">
         <arg value="plugin" />
