@@ -63,6 +63,7 @@ void json2ceylon(
             log(classContent);
             File outFile = createFileIfNil(resource);
             try(writer = outFile.Overwriter()) {
+                writer.write(generationInfo);
                 writer.write(classContent);
                 print("File: ``outFile.path`` created!");
             }
