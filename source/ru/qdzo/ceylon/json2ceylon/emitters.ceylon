@@ -63,7 +63,7 @@ shared String->String emitExternalizableClass(String->{[String, String]*} classI
             b.append("assert(is ``type`` ``name`` = jsObj.getArray(\"``name``\").narrow<``type[1..type.size-3]``>());");
         }
         case(sequenceWithComplex) {
-            b.append("assert(is [JsonObject*] ``name`` = jsObj.getArray(\"``name``\").narrow<JsonObject>());");
+            b.append("assert(is [JsonObject*] ``name`` = jsObj.getArray(\"``name``\").narrow<JsonObject>().sequence());");
         }
         case(complex) {
             b.append("assert(is JsonObject ``name`` = jsObj.getObjectOrNull(\"``name``\"));");
