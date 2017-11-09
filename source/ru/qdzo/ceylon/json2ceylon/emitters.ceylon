@@ -54,10 +54,10 @@ shared String->String emitExternalizableClass(String->{[String, String]*} classI
         b.append(indent2);
         switch(describeType(type))
         case(basic) {
-            b.append("assert(is ``type`` ``name`` = jsObj.get``type``OrNull(\"``name``\"));");
+            b.append("assert(is ``type`` ``name`` = jsObj.get(\"``name``\"));");
         }
         case(basicOptional) {
-            b.append("``type`` ``name`` = jsObj.get``type.replaceFirst("?", "")``OrNull(\"``name``\");");
+            b.append("``type`` ``name`` = jsObj.get(\"``name``\");");
         }
         case(sequenceWithBasic) {
             b.append("assert(is ``type`` ``name`` = jsObj.getArray(\"``name``\").narrow<``type[1..type.size-3]``>());");
@@ -66,7 +66,7 @@ shared String->String emitExternalizableClass(String->{[String, String]*} classI
             b.append("assert(is [JsonObject*] ``name`` = jsObj.getArray(\"``name``\").narrow<JsonObject>().sequence());");
         }
         case(complex) {
-            b.append("assert(is JsonObject ``name`` = jsObj.getObjectOrNull(\"``name``\"));");
+            b.append("assert(is JsonObject ``name`` = jsObj.get(\"``name``\"));");
         }
     }
     b.appendNewline();
