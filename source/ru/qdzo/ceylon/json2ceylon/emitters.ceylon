@@ -57,7 +57,7 @@ shared String->String emitExternalizableClass(String->{[String, String]*} classI
             b.append("assert(is ``type`` ``name`` = jsObj.get(\"``name``\"));");
         }
         case(basicOptional) {
-            b.append("``type`` ``name`` = jsObj.get(\"``name``\");");
+            b.append("assert(is ``type`` ``name`` = jsObj.get(\"``name``\"));");
         }
         case(sequenceWithBasic) {
             b.append("assert(is ``type`` ``name`` = jsObj.getArray(\"``name``\").narrow<``type[1..type.size-3]``>());");
