@@ -2,3 +2,4 @@
 modules
 .[^cg]*
 .classpath
+*~
