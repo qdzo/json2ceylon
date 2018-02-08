@@ -1,8 +1,17 @@
 import ceylon.collection {
     ArrayList
 }
+import ceylon.file {
+    parsePath,
+    File,
+    lines
+}
 import ceylon.json {
-    Visitor
+    Visitor,
+    JsonObject,
+    JsonArray,
+    JsonValue=Value,
+    parse
 }
 
 shared class Json2CeylonClassTransformer(String topLevelClassName) satisfies Visitor {
@@ -207,3 +216,76 @@ shared class Json2CeylonClassTransformer(String topLevelClassName) satisfies Vis
     }
 }
 
+
+shared class Json2CeylonClassTransformer2(JsonObject jsObj, String topLevelClassName) {
+
+    shared class ClassInfo(shared String name)  {
+        variable [[String, String]*] _fields = [];
+
+        shared  [[String, String]*] fields => _fields;
+
+        shared ClassInfo addField(String fieldType, String fieldName) {
+            _fields = _fields.append([[fieldType, fieldName]]);
+            return this;
+        }
+
+        string => "{ ``name``: ``fields`` }";
+    }
+
+    [ClassInfo*] collectVal(JsonValue val, ClassInfo classInfo, String fieldName, Integer inDepth = 0) {
+        switch (val)
+        case (is JsonObject) {
+            value clazzName = formatClazzName(fieldName);
+            classInfo.addField(nestingDepth(clazzName, inDepth), fieldName);
+            return collectClass(val, ClassInfo(clazzName));
+        }
+        case (is JsonArray) {
+                return collectVal (val.first, classInfo, fieldName, inDepth + 1);
+        }
+        case (is String) {
+            classInfo.addField(nestingDepth("String", inDepth), fieldName);
+            return [];
+        }
+        case (is Boolean) {
+            classInfo.addField(nestingDepth("Boolean", inDepth), fieldName);
+            return [];
+        }
+        case (is Integer) {
+            classInfo.addField(nestingDepth("Integer", inDepth), fieldName);
+            return [];
+        }
+        case (is Float) {
+            classInfo.addField(nestingDepth("Float", inDepth), fieldName);
+            return [];
+        }
+        case (is Null) {
+            classInfo.addField(nestingDepth("Anything", inDepth), fieldName);
+            return [];
+        }
+    }
+
+    String nestingDepth(String typeName, Integer arrayDepth) {
+        return "[".repeat(arrayDepth) + typeName + "*]".repeat(arrayDepth);
+    }
+    [ClassInfo*] collectClass(JsonObject jsObj, ClassInfo classInfo) {
+        variable [ClassInfo*] collectors = [classInfo];
+        for (key->val in jsObj) {
+            collectors = collectors.append(collectVal(val, classInfo, key));
+        }
+        return collectors;
+    }
+
+    shared [ClassInfo*] apply() {
+        return collectClass(jsObj, ClassInfo(topLevelClassName));
+    }
+
+}
+
+
+shared void testFN() {
+    assert(is File f = parsePath("/home/vbanchenko/Devel/backend/autodelivery-scale-gateway/calc-result.json").resource);
+    value content = "".join(lines(f));
+    assert(is JsonObject jsObj = parse(content));
+    value t = Json2CeylonClassTransformer2(jsObj, "Calc");
+    t.apply().each(print);
+}
