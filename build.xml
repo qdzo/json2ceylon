@@ -18,7 +18,9 @@
     </condition>
     <property name="ceylon.ant.lib" value="${ceylon.home}/lib/ceylon-ant.jar" />
     <property name="source.encoding" value="UTF-8"/>
-    <property name="run.module" value="ru.qdzo.ceylon.json2ceylon"/>
+
+    <property name="run.module.name" value="ru.qdzo.ceylon.json2ceylon"/>
+    <property name="run.module.version" value="0.0.2-SNAPSHOT"/>
 
 
     <target name="ceylon-ant-taskdefs">
@@ -28,7 +30,7 @@
       <typedef resource="com/redhat/ceylon/ant/antlib.xml" classpathref="ant-tasks"/>
 
       <moduleset id="plugin.modules">
-        <module name="ru.qdzo.ceylon.json2ceylon" version="0.0.1"/>
+        <module name="${run.module.name}" version="${run.module.version}"/>
       </moduleset>
     </target>
 
@@ -37,7 +39,7 @@
 
     <target name="compile" depends="ceylon-ant-taskdefs">
         <ceylon-compile encoding="${source.encoding}">
-            <module name="ru.qdzo.ceylon.json2ceylon"/>
+            <module name="${run.module.name}"/>
         </ceylon-compile>
     </target>
 
@@ -49,12 +51,12 @@
 
     <target name="doc" depends="ceylon-ant-taskdefs">
         <ceylon-doc encoding="${source.encoding}">
-            <module name="ru.qdzo.ceylon.json2ceylon"/>
+            <module name="${run.module.name}"/>
         </ceylon-doc>
     </target>
 
     <target name="run" depends="compile">
-        <ceylon-run module="ru.qdzo.ceylon.json2ceylon/0.0.1"/>
+        <ceylon-run module="${run.module.name}/${run.module.version}"/>
     </target>
 
     <target name="clean">
@@ -66,14 +68,14 @@
       <exec executable="ceylon">
         <arg value="plugin" />
         <arg value="pack" />
-        <arg value="${run.module}" />
+        <arg value="${run.module.name}" />
       </exec>
       <echo>Install plugin</echo>
       <exec executable="ceylon">
         <arg value="plugin" />
         <arg value="install" />
         <arg value="--force" />
-        <arg value="${run.module}" />
+        <arg value="${run.module.name}" />
       </exec>
     </target>
 </project>
