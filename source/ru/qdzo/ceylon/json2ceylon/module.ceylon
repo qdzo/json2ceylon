@@ -1,5 +1,5 @@
 native("jvm")
-module ru.qdzo.ceylon.json2ceylon "0.0.1" {
+module ru.qdzo.ceylon.json2ceylon "0.0.2-SNAPSHOT" {
     shared import ceylon.json "1.3.3";
     import ceylon.file "1.3.3";
     import ceylon.time "1.3.3";

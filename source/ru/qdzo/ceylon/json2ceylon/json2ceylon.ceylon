@@ -8,8 +8,7 @@ import ceylon.file {
 }
 import ceylon.json {
     JsonObject,
-    parse,
-    visit
+    parse
 }
 
 shared
@@ -19,8 +18,7 @@ shared
 
     "Json should have toplevel json-object"
     assert(is JsonObject obj = parse(jsonString));
-    value classEmitter = Json2CeylonClassTransformer(rootClassName);
-    visit(obj, classEmitter);
+    value classEmitter = Json2CeylonClassTransformer(obj ,rootClassName);
     return classEmitter.result;
 }
 

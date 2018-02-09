@@ -8,7 +8,7 @@ String sharedFieldTemplate(String[2] field)
 String fieldTemplate(String[2] field)
         => "``field[0]`` ``field[1]``";
 
-String formatClazzName(String str)
+String formatClassName(String str)
         => str[0..0].uppercased +
             (str.endsWith("s") && !str.endsWith("ss") // may be plural - cut last 's' char
                 then str[1..str.size-2]
@@ -24,3 +24,7 @@ String generationInfo => "/*
 
                           ";
 
+"Adds square brackets to typeName according to depth"
+String formatArrayNesting(String typeName, Integer arrayDepth) {
+    return "[".repeat(arrayDepth) + typeName + "*]".repeat(arrayDepth);
+}

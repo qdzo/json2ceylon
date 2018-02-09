@@ -5,30 +5,29 @@ String? argVal(String* args)
         => args.map(process.namedArgumentValue).coalesced.first;
 
 shared void run() {
-    testFN();
-//    if(!ifArg("classname", "inputfile", "outdir", "c", "f", "o")) {
-//        help();
-//        return;
-//    }
-//
-//    "Class name should be given for the root class: --classname=ClassName of -c ClassName"
-//    assert(exists clazzName = argVal("classname", "c"));
-//
-//    "Input file should be given: --inputfile=file.json or -f file.json"
-//    assert(exists inputFileName = argVal("inputfile", "f"));
-//
-//    "Output dir should be given: --outdir=path/to/dir or -o path/to/dir"
-//    assert(exists outDirName = argVal("outdir", "o"));
-//
-//    Boolean externalizable =
-//            ifArg("externalizable", "e") then true else false;
-//
-//    json2ceylon {
-//        inputFile = inputFileName;
-//        outputDir = outDirName;
-//        clazzName = clazzName;
-//        externalizable = externalizable;
-//    };
+    if(!ifArg("classname", "inputfile", "outdir", "c", "f", "o")) {
+        help();
+        return;
+    }
+
+    "Class name should be given for the root class: --classname=ClassName of -c ClassName"
+    assert(exists clazzName = argVal("classname", "c"));
+
+    "Input file should be given: --inputfile=file.json or -f file.json"
+    assert(exists inputFileName = argVal("inputfile", "f"));
+
+    "Output dir should be given: --outdir=path/to/dir or -o path/to/dir"
+    assert(exists outDirName = argVal("outdir", "o"));
+
+    Boolean externalizable =
+            ifArg("externalizable", "e") then true else false;
+
+    json2ceylon {
+        inputFile = inputFileName;
+        outputDir = outDirName;
+        clazzName = clazzName;
+        externalizable = externalizable;
+    };
 
 }
 
