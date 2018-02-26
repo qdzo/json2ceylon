@@ -7,6 +7,22 @@ import ceylon.json {
 import ru.qdzo.ceylon.json2ceylon {
     formatClassName
 }
+import ceylon.time.iso8601 {
+    parseDate,
+    parseDateTime,
+    parseTime
+}
+import ceylon.time {
+    Date,
+    DateTime,
+    Time
+}
+import java.util {
+    UUID
+}
+import java.lang {
+    IllegalArgumentException
+}
 
 shared class Json2CeylonClassTransformer(JsonObject jsObj, String topLevelClassName) {
 
@@ -20,10 +36,10 @@ shared class Json2CeylonClassTransformer(JsonObject jsObj, String topLevelClassN
         string => "{ ``name``: ``fields`` }";
     }
 
-    <String->{[String,String]*}> classInfoToEntrie(ClassInfo ci) => ci.name -> ci.fields;
+    <String->{[String,String]*}> classInfoToEntry(ClassInfo ci) => ci.name -> ci.fields;
 
     shared {<String->{[String,String]*}>*} result
-            => collectClass(jsObj, ClassInfo(topLevelClassName)).map(classInfoToEntrie);
+            => collectClass(jsObj, ClassInfo(topLevelClassName)).map(classInfoToEntry);
 
     [ClassInfo*] collectClass(JsonObject jsObj, ClassInfo classInfo) {
         variable [ClassInfo*] collectors = [classInfo];
@@ -41,7 +57,9 @@ shared class Json2CeylonClassTransformer(JsonObject jsObj, String topLevelClassN
             return collectClass(val, ClassInfo(className));
         }
         case (is JsonArray) { return collectVal (val.first, classInfo, fieldName, inDepth + 1); }
-        case (is String) { classInfo.addField(formatArrayNesting("String", inDepth), fieldName); }
+        case (is String) {
+            String guessedType = guessStringContentType(val);
+            classInfo.addField(formatArrayNesting(guessedType, inDepth), fieldName); }
         case (is Boolean) { classInfo.addField(formatArrayNesting("Boolean", inDepth), fieldName); }
         case (is Integer) { classInfo.addField(formatArrayNesting("Integer", inDepth), fieldName); }
         case (is Float) { classInfo.addField(formatArrayNesting("Float", inDepth), fieldName); }
@@ -50,3 +68,20 @@ shared class Json2CeylonClassTransformer(JsonObject jsObj, String topLevelClassN
     }
 }
 
+String guessStringContentType(String val){
+    try {
+        if(parseDateTime(val) is DateTime) {
+            return "DateTime";
+        }
+        if(parseDate(val) is Date) {
+            return "Date";
+        }
+        if(parseTime(val) is Time) {
+            return "Time";
+        }
+        UUID.fromString(val);
+        return "UUID";
+    } catch (IllegalArgumentException e) {
+        return "String";
+    }
+}
