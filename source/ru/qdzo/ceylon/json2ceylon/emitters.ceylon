@@ -9,26 +9,19 @@ shared String->String emitClass(String->{[String, String]*} classInfo) {
                  ``",\n    ".join(fields.map(sharedFieldTemplate))``
              ) {}";
     return className->classContent;
-//    value b = StringBuilder();
-//    b.append("serializable");
-//    b.appendNewline();
-//    b.append("shared class ``className``(");
-//    value indent = "\n    ";
-//    b.append(indent);
-//    b.append(",``indent``".join(fields.map(sharedFieldTemplate)));
-//    b.appendNewline();
-//    b.append(") {}");
-//    return className->b.string;
 }
 
-Map<String,[String[2]*]> imports = map {
-    "Time"->[["ceylon.time", "Time"],
-             ["ceylon.time.iso8601", "parseTime"]],
-    "Date"->[["ceylon.time", "Date"],
-             ["ceylon.time.iso8601", "parseDate"]],
-    "DateTime"->[["ceylon.time", "DateTime"],
-                 ["ceylon.time.iso8601", "parseDateTime"]],
-    "UUID"->[["java.util", "UUID"]]
+Map<String,String[2]> imports = map {
+    "Time"->["ceylon.time", "Time"],
+    "parseTime" -> ["ceylon.time.iso8601", "parseTime"],
+    "Date"->["ceylon.time", "Date"],
+    "parseDate"-> ["ceylon.time.iso8601", "parseDate"],
+    "DateTime"->["ceylon.time", "DateTime"],
+    "parseDateTime" ->["ceylon.time.iso8601", "parseDateTime"],
+    "UUID"->["java.util", "UUID"],
+    "parseJson"-> ["ceylon.json","parseJson = parse"],
+    "JsonObject"-> ["ceylon.json","JsonObject"],
+    "JsonArray"-> ["ceylon.json","JsonArray"]
 };
 
 String emitAdditionalImports(Set<String> types){
@@ -38,7 +31,7 @@ String emitAdditionalImports(Set<String> types){
         value b = StringBuilder();
         for (pkg->classesOrFns in mergedImports) {
              b.append("import ``pkg`` {
-                           ``"\n    ".join(classesOrFns)``
+                           ``",\n    ".join(classesOrFns)``
                        }\n");
         }
         return b.string;
@@ -46,172 +39,151 @@ String emitAdditionalImports(Set<String> types){
     return "";
 }
 
-Map<String, [String*]> mergeImports({<String->[String[2]*]>*} imports) {
+// Map of packageName->[importEntities]
+Map<String, [String*]> mergeImports({<String->String[2]>*} imports) {
     return imports
-        .flatMap((className->importPaths)=>importPaths)
+        .map((className->importPaths)=>importPaths)
         .group(([pkg, _])=> pkg)
         .mapItems((String key, [String[2]+] paths) => paths.collect(([pkg, classOrFn]) => classOrFn));
 }
 
-
+Set<String> findAdditionalJsonTypesForImport(Set<String> types){
+    Boolean isArrayNeeded = types.find {
+        Boolean selecting(String t) {
+            return sequenceWithBasic.exactly(t) ||
+            sequenceWithAnything.exactly(t) ||
+            sequenceWithComplex.exactly(t) ||
+            sequenceWithStringParsed.exactly(t);
+        }
+    } exists;
+    if(isArrayNeeded) {
+        return types.union(set{"parseJson", "JsonObject", "JsonArray"});
+    }
+    return types.union(set{"parseJson", "JsonObject"});
+}
 
 // experiments with generating self deserializable class
+
 shared String->String emitExternalizableClass(String->{[String, String]*} classInfo) {
-    value b = StringBuilder();
     value className->fields = classInfo;
-    value n = "import ceylon.json { parse, JsonObject, JsonArray }
+    value uniqTypes = set(fields.map(([t, v]) => t));
+    value classContent
+             = "shared class ``className`` {
+                    ``defineFields(fields, 1)``;
 
-               shared class ``className`` {
-                   ``";\n    ".join(fields.map(sharedFieldTemplate))``;
+                    shared new (
+                            ``defineConstructorProps(fields, 3)``) {
 
-                   shared new (
-                           ``",\n            ".join(fields.map(fieldTemplate))``) {
-                       ``";\n        ".join(fields.map((f) => "this.``f[1]`` = ``f[1]``"))``;
-                   }
+                        ``assignFields(fields, 2)``;
+                    }
 
-                   shared new fromJson(String|JsonObject json) {
-                       assert(is JsonObject jsObj = switch(json) case(is JsonObject) json else parse(json));
-                       ``",\n            "``
-                   }
+                    shared new fromJson(String|JsonObject json) {
+                        assert(is JsonObject jsObj = switch(json) case(is JsonObject) json else parseJson(json));
+                        ``assertFields(fields, 2)``
+
+                        ``assignFields(fields, 2)``
+                    }
+
+                    ``uniqTypes.contains("UUID") then defineParseUUIDFn() else ""``
+
+                    shared JsonObject toJson => JsonObject {
+                        ``fieldsToJsonEntries(fields, 2)``
+                    }
 
                 }";
-//    b.append("import ceylon.json { parse, JsonObject, JsonArray }");
-//    b.appendNewline();
-//    b.appendNewline();
-//    b.append("shared class ``className`` {");
-//    value indent = "\n    ";
-//    value indent2 = "\n        ";
-//    value indent3 = "\n            ";
-//    b.appendNewline();
-//    b.append(indent);
-//     fields
-//    b.append(";``indent``".join(fields.map(sharedFieldTemplate)));
-//    b.append(";");
-//    b.appendNewline();
-    // base constructor
-//    b.append(indent);
-//    b.append("shared new(");
-//    b.append(indent3);
-//    b.append(",``indent3``".join(fields.map(fieldTemplate)));
-//    b.append(") {");
-//    b.appendNewline();
-//    b.append(indent2);
-//    b.append(";``indent2``".join(fields.map((f) => "this.``f[1]`` = ``f[1]``")));
-//    b.append(";");
-//    b.append(indent);
-//    b.append("}");
-//    b.appendNewline();
-//    b.append(indent);
-    // fromJson constructor
-//    b.append("shared new fromJson(String|JsonObject json) {");
-//    b.appendNewline();
-//    b.append(indent2);
-//    b.append("assert(is JsonObject jsObj = switch(json) case(is JsonObject) json else parse(json));");
-//    b.appendNewline();
-// TODO Replace next lines with new code
-//    for([type, name] in fields) {
-//        b.append(indent2);
-//        switch(describeType(type))
-//        case(basic) {
-//            b.append("assert(is ``type`` ``name`` = jsObj.get(\"``name``\"));");
-//        }
-//        case(basicOptional) {
-//            b.append("assert(is ``type`` ``name`` = jsObj.get(\"``name``\"));");
-//        }
-//        case(sequenceWithBasic) {
-//            b.append("assert(is ``type`` ``name`` = jsObj.getArray(\"``name``\").narrow<``type[1..type.size-3]``>());");
-//        }
-//        case(sequenceWithComplex) {
-//            b.append("assert(is [JsonObject*] ``name`` = jsObj.getArray(\"``name``\").narrow<JsonObject>().sequence());");
-//        }
-//        case(complex) {
-//            b.append("assert(is JsonObject ``name`` = jsObj.get(\"``name``\"));");
-//        }
-//    }
-//    b.appendNewline();
-//    for([type, name] in fields) {
-//        b.append(indent2);
-//        switch(describeType(type))
-//        case (basic|basicOptional) {
-//            b.append("this.``name`` = ``name``;");
-//        }
-//        case (sequenceWithBasic) {
-//            b.append("this.``name`` = ``name``;");
-//        }
-//        case(sequenceWithComplex) {
-//            b.append("this.``name`` = ``name``.collect(``type[1..type.size-3]``.fromJson);");
-//        }
-//        case(complex) {
-//            b.append("this.``name`` = ``type``.fromJson(``name``);");
-//        }
-//    }
-//    b.append(indent);
-//    b.append("}");
-//    b.appendNewline();
-//    b.append(indent);
-//    b.append("shared JsonObject toJson => JsonObject {");
-//    b.append(indent2);
-//    assert(exists [ftype, fname] = fields.first);
-//    b.append(fieldToJsonEntry(ftype, fname));
-//    for([type, name] in fields.rest) {
-//        b.append(",");
-//        b.append(indent2);
-//        b.append(fieldToJsonEntry(type, name));
-//    }
-//    b.append(indent);
-//    b.append("};");
-//    b.appendNewline();
-//    b.append("}");
-    return className->b.string;
+value importLines = emitAdditionalImports(findAdditionalJsonTypesForImport(uniqTypes));
+    return className-> importLines + "\n\n" + classContent;
 }
 
-String fieldToJsonEntry(String type,String name) {
-    if(type in {"String", "String?", "Integer", "Float", "Boolean"}) {
-        return "\"``name``\" -> ``name``";
-    }
-    else if(type.contains("["), type.containsAny {"String", "String?", "Integer", "Float", "Boolean"}) {
-        return "\"``name``\" -> JsonArray(``name``)";
-    }
-    else if(type.contains("[")) {
-        return "\"``name``\" -> JsonArray(``name``*.toJson)";
-    }
-    else {
-        return "\"``name``\" -> ``name``.toJson";
-    }
-}
+String defineParseUUIDFn() => "UUID(String) parseUUID = UUID.fromString;";
 
-String assertFields({String[2]*} fields)
-        => "\n    ".join(fields.map((field) => assertField(*field)));
+String defineFields({String[2]*} fields, Integer indentSize)
+        => let(indent = makeIndentWithNewLine(indentSize),
+            semicolonWithIndent = ";" + indent)
+            semicolonWithIndent.join(fields.map(sharedFieldTemplate));
+
+String defineConstructorProps({String[2]*} fields, Integer indentSize)
+        => let(indent = makeIndentWithNewLine(indentSize),
+               commaWithIndent = "," + indent)
+               commaWithIndent.join(fields.map(fieldTemplate));
+
+String fieldsToJsonEntries({String[2]*} fields, Integer indentSize)
+        => let(indent = makeIndentWithNewLine(indentSize),
+               commaWithIndent = "," + indent)
+               commaWithIndent.join(fields.map((field) => fieldToJsonEntry(*field)));
+
+String fieldToJsonEntry(String type, String name)
+        => switch (describeType(type))
+           case (basic) "\"``name``\" -> ``name``"
+           case (complex) "\"``name``\" -> ``name``.toJson"
+           case (anything) "\"``name``\" -> ``name``"
+           case (stringParsed) "\"``name``\" -> ``name``.string"
+           case (sequenceWithBasic) "\"``name``\" -> JsonArray(``name``)"
+           case (sequenceWithAnything) "\"``name``\" -> JsonArray(``name``)"
+           case (sequenceWithComplex) "\"``name``\" -> JsonArray(``name``*.toJson)"
+           case (sequenceWithStringParsed) "\"``name``\" -> JsonArray(``name``*.string)";
+
+String assertFields({String[2]*} fields, Integer indentSize)
+        => let(indent = makeIndentWithNewLine(indentSize))
+           indent.join(fields.map((field) => assertField(*field)));
 
 String assertField(String type, String name) => switch(describeType(type))
         case(basic) "assert(is ``type`` ``name`` = jsObj.get(\"``name``\"));"
-        case(basicOptional) "assert(is ``type`` ``name`` = jsObj.get(\"``name``\"));"
-        case(sequenceWithBasic) "assert(is ``type`` ``name`` = jsObj.getArray(\"``name``\").narrow<``type[1..type.size-3]``>());"
-        case(sequenceWithComplex) "assert(is [JsonObject*] ``name`` = jsObj.getArray(\"``name``\").narrow<JsonObject>().sequence());"
-        case(complex) "assert(is JsonObject ``name`` = jsObj.get(\"``name``\"));";
+        case(anything) "assert(is ``type`` ``name`` = jsObj.get(\"``name``\"));"
+        case(complex) "assert(is JsonObject ``name``JsObj = jsObj.get(\"``name``\"),
+                              is ``type`` ``name`` = ``type``.fromJson(``name``JsObj));"
+        case(stringParsed) "assert(is String ``name``Str = jsObj.get(\"``name``\"),
+                                   is ``type`` ``name`` = parse``type``(``name``Str));"
+        case(sequenceWithBasic) "assert(is ``type`` ``name`` = jsObj.getArray(\"``name``\").narrow<``type[1..type.size-3]``>());" // BUG: supports only one nesting level
+        case(sequenceWithComplex) "assert(is [JsonObject*] ``name``jsObjs = jsObj.getArray(\"``name``\").narrow<JsonObject>().sequence(),
+                                          is [``type``*] ``name`` = ``name``JsObjs.collect(``type``.fromJson));"
+        case(sequenceWithAnything) "assert(is [Anything*] ``name`` = jsObj.getArray(\"``name``\").sequence());"
+        case(sequenceWithStringParsed) "assert(is [String*] ``name``Strs = jsObj.getArray(\"``name``\").narrow<String>().sequence(),
+                                               is [``type``*] ``name`` = ``name``Strs.map(parse``type``).narrow<``type``>().sequence());";
 
-shared abstract class Type() of basic|complex|basicOptional|sequenceWithBasic|sequenceWithComplex {}
+String assignFields({String[2]*} fields, Integer indentSize)
+=> let(indent = makeIndentWithNewLine(indentSize))
+       indent.join(fields.map(([_,name]) => "this.``name`` = ``name``;"));
 
-shared object basic extends Type() {}
-shared object complex extends Type() {}
-shared object basicOptional extends Type() {}
-shared object sequenceWithBasic extends Type() {}
-shared object sequenceWithComplex  extends Type() {}
+shared abstract class Type() of basic|complex|anything|stringParsed|sequenceWithBasic|sequenceWithAnything|sequenceWithComplex|sequenceWithStringParsed {
+    shared formal Boolean exactly(String str);
+    shared formal {String*} enum;
+}
 
-Type describeType(String t) {
-    if(t in {"String", "Integer", "Float", "Boolean"}) {
-        return basic;
-    }
-    else if(t == "String?") {
-        return basicOptional;
-    }
-    else if(t.contains("["), t.containsAny {"String", "String?", "Integer", "Float", "Boolean"}) {
-        return sequenceWithBasic;
-    }
-    else if(t.contains("[")) {
-        return sequenceWithComplex;
-    }
-    else {
-        return complex;
-    }
-  }
+Type describeType(String str) {
+    assert(exists t = `Type`.caseValues.find((t)=> t.exactly(str)));
+    return t;
+}
+
+shared object basic extends Type() {
+    enum = {"String", "Integer", "Float", "Boolean"};
+    exactly(String str) => str in enum;
+}
+shared object complex extends Type() {
+    enum = {};
+    exactly(String str) => !str.startsWith("[") && !(str in basic.enum.chain(anything.enum).chain(stringParsed.enum));
+}
+shared object anything extends Type() {
+    enum = {"Anything"};
+    exactly(String str) => str in enum;
+}
+shared object stringParsed extends Type() {
+    enum = {"Time", "Date", "DateTime", "UUID"};
+    exactly(String str) => str in enum;
+}
+shared object sequenceWithBasic extends Type() {
+    enum = {};
+    exactly(String str) => str.startsWith("[") && str.containsAny(basic.enum);
+}
+shared object sequenceWithAnything extends Type() {
+    enum = {};
+    exactly(String str) => str.startsWith("[") && str.containsAny(anything.enum);
+}
+shared object sequenceWithComplex extends Type() {
+    enum = {};
+    exactly(String str) => str.startsWith("[") && !(str in basic.enum.chain(anything.enum).chain(stringParsed.enum));
+}
+shared object sequenceWithStringParsed extends Type() {
+    enum = {};
+    exactly(String str) => str.startsWith("[") && str.containsAny(stringParsed.enum) ;
+}
