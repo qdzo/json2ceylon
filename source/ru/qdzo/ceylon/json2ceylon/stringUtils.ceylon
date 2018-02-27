@@ -28,3 +28,9 @@ String generationInfo => "/*
 String formatArrayNesting(String typeName, Integer arrayDepth) {
     return "[".repeat(arrayDepth) + typeName + "*]".repeat(arrayDepth);
 }
+
+"1 indent = 4 spaces"
+String makeIndent(Integer size = 1) => "    ".repeat(size);
+String makeIndentWithNewLine(Integer size) => "\n" + makeIndent(size);
+
+
