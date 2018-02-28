@@ -78,7 +78,7 @@ shared String->String emitExternalizableClass(String->{[String, String]*} classI
                         ``assignFields(fields, 2)``
                     }
 
-                    ``uniqTypes.contains("UUID") then defineParseUUIDFn() else ""``
+                    ``uniqTypes.contains("UUID") then defineParseUUIDFn(1) else ""``
 
                     shared new fromJson(String|JsonObject json) {
                         assert(is JsonObject jsObj = switch(json) case(is JsonObject) json else parseJson(json));
@@ -96,7 +96,15 @@ value importLines = emitAdditionalImports(findAdditionalJsonTypesForImport(uniqT
     return className-> importLines + "\n\n" + classContent;
 }
 
-String defineParseUUIDFn() => "UUID(String) parseUUID = UUID.fromString;";
+String defineParseUUIDFn(Integer indentSize)
+        => let (indent = makeIndent(indentSize))
+            "UUID|Exception parseUUID(String str){
+             ``indent``    try {
+             ``indent``        return UUID.fromString(str);
+             ``indent``    } catch(Exception e) {
+             ``indent``        return e;
+             ``indent``    }
+             ``indent``}";
 
 String defineFields({String[2]*} fields, Integer indentSize)
         => let(indent = makeIndentWithNewLine(indentSize),
@@ -173,8 +181,8 @@ String assertField(String type, String name, Integer indentSize) {
     }
     case (sequenceWithStringParsed) {
         if (arrayDepth(type) == 1) {
-            return "``indent``assert(is [String*] ``name``Strs = jsObj.getArray(\"``name``\").narrow<String>().sequence(),
-                    ``indent``       is ``type`` ``escapedName`` = ``name``Strs.map(parse``trimArrayChars(type)``).narrow<``trimArrayChars(type)``>().sequence());";
+            return "``indent``[String*] ``name``Strs = jsObj.getArray(\"``name``\").narrow<String>().sequence();
+                    ``indent````type`` ``escapedName`` = ``name``Strs.map(parse``trimArrayChars(type)``).narrow<``trimArrayChars(type)``>().sequence();";
         }
         return "";
     }
