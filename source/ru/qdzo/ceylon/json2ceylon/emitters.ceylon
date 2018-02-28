@@ -62,6 +62,11 @@ Set<String> findAdditionalJsonTypesForImport(Set<String> types){
     return types.union(set{"parseJson", "JsonObject"});
 }
 
+Set<String> findAdditinalParseFunctionsForImport(Set<String> types){
+    value parsedTypesExceptUUID = stringParsed.enum.filter(not("UUID".equals));
+    Set<String> neededParsedTypes = types.intersection(set(parsedTypesExceptUUID));
+    return types.union( set{ for (t in neededParsedTypes) "parse``t``"} );
+}
 // experiments with generating self deserializable class
 
 shared String->String emitExternalizableClass(String->{[String, String]*} classInfo) {
@@ -92,7 +97,10 @@ shared String->String emitExternalizableClass(String->{[String, String]*} classI
                     };
 
                 }";
-value importLines = emitAdditionalImports(findAdditionalJsonTypesForImport(uniqTypes));
+    value importLines =
+            emitAdditionalImports(
+                findAdditionalJsonTypesForImport(
+                    findAdditinalParseFunctionsForImport(uniqTypes)));
     return className-> importLines + "\n\n" + classContent;
 }
 
