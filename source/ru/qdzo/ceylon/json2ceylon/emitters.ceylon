@@ -6,7 +6,7 @@ shared String->String emitClass(String->{[String, String]*} classInfo) {
 
              serializable
              shared class ``className``(
-                 ``",\n    ".join(fields.map(sharedFieldTemplate))``
+                 ``defineFieldsInConstructor(fields, 1)``
              ) {}";
     return className->classContent;
 }
@@ -72,10 +72,13 @@ shared String->String emitExternalizableClass(String->{[String, String]*} classI
                     ``defineFields(fields, 1)``;
 
                     shared new (
-                            ``defineConstructorProps(fields, 3)``) {
+                            ``defineConstructorProps(fields, 3)``
+                            ) {
 
-                        ``assignFields(fields, 2)``;
+                        ``assignFields(fields, 2)``
                     }
+
+                    ``uniqTypes.contains("UUID") then defineParseUUIDFn() else ""``
 
                     shared new fromJson(String|JsonObject json) {
                         assert(is JsonObject jsObj = switch(json) case(is JsonObject) json else parseJson(json));
@@ -84,11 +87,9 @@ shared String->String emitExternalizableClass(String->{[String, String]*} classI
                         ``assignFields(fields, 2)``
                     }
 
-                    ``uniqTypes.contains("UUID") then defineParseUUIDFn() else ""``
-
                     shared JsonObject toJson => JsonObject {
                         ``fieldsToJsonEntries(fields, 2)``
-                    }
+                    };
 
                 }";
 value importLines = emitAdditionalImports(findAdditionalJsonTypesForImport(uniqTypes));
@@ -102,6 +103,11 @@ String defineFields({String[2]*} fields, Integer indentSize)
             semicolonWithIndent = ";" + indent)
             semicolonWithIndent.join(fields.map(sharedFieldTemplate));
 
+String defineFieldsInConstructor({String[2]*} fields, Integer indentSize)
+        => let(indent = makeIndentWithNewLine(indentSize),
+            commaWithIndent = "," + indent)
+            commaWithIndent.join(fields.map(sharedFieldTemplate));
+
 String defineConstructorProps({String[2]*} fields, Integer indentSize)
         => let(indent = makeIndentWithNewLine(indentSize),
                commaWithIndent = "," + indent)
@@ -112,38 +118,71 @@ String fieldsToJsonEntries({String[2]*} fields, Integer indentSize)
                commaWithIndent = "," + indent)
                commaWithIndent.join(fields.map((field) => fieldToJsonEntry(*field)));
 
-String fieldToJsonEntry(String type, String name)
-        => switch (describeType(type))
-           case (basic) "\"``name``\" -> ``name``"
-           case (complex) "\"``name``\" -> ``name``.toJson"
-           case (anything) "\"``name``\" -> ``name``"
-           case (stringParsed) "\"``name``\" -> ``name``.string"
-           case (sequenceWithBasic) "\"``name``\" -> JsonArray(``name``)"
-           case (sequenceWithAnything) "\"``name``\" -> JsonArray(``name``)"
-           case (sequenceWithComplex) "\"``name``\" -> JsonArray(``name``*.toJson)"
-           case (sequenceWithStringParsed) "\"``name``\" -> JsonArray(``name``*.string)";
+String fieldToJsonEntry(String type, String name) {
+    value escapedName = escapeCeylonKeywords(name);
+    return switch (describeType(type))
+           case (basic) "\"``name``\" -> ``escapedName``"
+           case (complex) "\"``name``\" -> ``escapedName``.toJson"
+           case (anything) "\"``name``\" -> ``escapedName``"
+           case (stringParsed) "\"``name``\" -> ``escapedName``.string"
+           case (sequenceWithBasic) "\"``name``\" -> JsonArray(``escapedName``)"
+           case (sequenceWithAnything) "\"``name``\" -> JsonArray(``escapedName``)"
+           case (sequenceWithComplex) "\"``name``\" -> JsonArray(``escapedName``*.toJson)"
+           case (sequenceWithStringParsed) "\"``name``\" -> JsonArray(``escapedName``*.string)";
+}
 
 String assertFields({String[2]*} fields, Integer indentSize)
-        => let(indent = makeIndentWithNewLine(indentSize))
-           indent.join(fields.map((field) => assertField(*field)));
+        => "\n".join(fields.map(([type, name]) => assertField(type, name, indentSize))).trimLeading(' '.equals);
 
-String assertField(String type, String name) => switch(describeType(type))
-        case(basic) "assert(is ``type`` ``name`` = jsObj.get(\"``name``\"));"
-        case(anything) "assert(is ``type`` ``name`` = jsObj.get(\"``name``\"));"
-        case(complex) "assert(is JsonObject ``name``JsObj = jsObj.get(\"``name``\"),
-                              is ``type`` ``name`` = ``type``.fromJson(``name``JsObj));"
-        case(stringParsed) "assert(is String ``name``Str = jsObj.get(\"``name``\"),
-                                   is ``type`` ``name`` = parse``type``(``name``Str));"
-        case(sequenceWithBasic) "assert(is ``type`` ``name`` = jsObj.getArray(\"``name``\").narrow<``type[1..type.size-3]``>());" // BUG: supports only one nesting level
-        case(sequenceWithComplex) "assert(is [JsonObject*] ``name``jsObjs = jsObj.getArray(\"``name``\").narrow<JsonObject>().sequence(),
-                                          is [``type``*] ``name`` = ``name``JsObjs.collect(``type``.fromJson));"
-        case(sequenceWithAnything) "assert(is [Anything*] ``name`` = jsObj.getArray(\"``name``\").sequence());"
-        case(sequenceWithStringParsed) "assert(is [String*] ``name``Strs = jsObj.getArray(\"``name``\").narrow<String>().sequence(),
-                                               is [``type``*] ``name`` = ``name``Strs.map(parse``type``).narrow<``type``>().sequence());";
+String assertField(String type, String name, Integer indentSize) {
+    value indent = makeIndent(indentSize);
+    value escapedName = escapeCeylonKeywords(name);
+    switch (describeType(type))
+    case (basic) {
+        return "``indent``assert(is ``type`` ``escapedName`` = jsObj.get(\"``name``\"));";
+    }
+    case (anything) {
+        return "``indent``assert(is ``type`` ``escapedName`` = jsObj.get(\"``name``\"));";
+    }
+    case (complex) {
+        return "``indent``assert(is JsonObject ``name``JsObj = jsObj.get(\"``name``\"));
+                ``indent````type`` ``escapedName`` = ``type``.fromJson(``name``JsObj);";
+    }
+    case (stringParsed) {
+        return "``indent``assert(is String ``name``Str = jsObj.get(\"``name``\"),
+                ``indent``       is ``type`` ``escapedName`` = parse``type``(``name``Str));";
+    }
+    case (sequenceWithBasic) {
+        if (arrayDepth(type) == 1) {
+            return "``indent``assert(is ``type`` ``escapedName`` = jsObj.getArray(\"``name``\").narrow<``trimArrayChars(type)``>());"; // BUG: supports only one nesting level
+        }
+        return "";
+    }
+    case (sequenceWithComplex) {
+        if (arrayDepth(type) == 1) {
+            return "``indent``assert(is [JsonObject*] ``name``jsObjs = jsObj.getArray(\"``name``\").narrow<JsonObject>().sequence(),
+                    ``indent``       is ``type`` ``escapedName`` = ``name``JsObjs.collect(``trimArrayChars(type)``.fromJson));";
+        }
+        return "";
+    }
+    case (sequenceWithAnything) {
+        if (arrayDepth(type) == 1) {
+            return "``indent``assert(is [Anything*] ``escapedName`` = jsObj.getArray(\"``name``\").sequence());";
+        }
+        return "";
+    }
+    case (sequenceWithStringParsed) {
+        if (arrayDepth(type) == 1) {
+            return "``indent``assert(is [String*] ``name``Strs = jsObj.getArray(\"``name``\").narrow<String>().sequence(),
+                    ``indent``       is ``type`` ``escapedName`` = ``name``Strs.map(parse``trimArrayChars(type)``).narrow<``trimArrayChars(type)``>().sequence());";
+        }
+        return "";
+    }
+}
 
 String assignFields({String[2]*} fields, Integer indentSize)
-=> let(indent = makeIndentWithNewLine(indentSize))
-       indent.join(fields.map(([_,name]) => "this.``name`` = ``name``;"));
+        => let(indent = makeIndentWithNewLine(indentSize))
+            indent.join(fields.map(([_,name]) => let(escapedName = escapeCeylonKeywords(name)) "this.``escapedName`` = ``escapedName``;"));
 
 shared abstract class Type() of basic|complex|anything|stringParsed|sequenceWithBasic|sequenceWithAnything|sequenceWithComplex|sequenceWithStringParsed {
     shared formal Boolean exactly(String str);
@@ -161,7 +200,7 @@ shared object basic extends Type() {
 }
 shared object complex extends Type() {
     enum = {};
-    exactly(String str) => !str.startsWith("[") && !(str in basic.enum.chain(anything.enum).chain(stringParsed.enum));
+    exactly(String str) => !isArrayType(str) && !(str in basic.enum.chain(anything.enum).chain(stringParsed.enum));
 }
 shared object anything extends Type() {
     enum = {"Anything"};
@@ -173,17 +212,17 @@ shared object stringParsed extends Type() {
 }
 shared object sequenceWithBasic extends Type() {
     enum = {};
-    exactly(String str) => str.startsWith("[") && str.containsAny(basic.enum);
+    exactly(String str) => isArrayType(str) && str.containsAny(basic.enum);
 }
 shared object sequenceWithAnything extends Type() {
     enum = {};
-    exactly(String str) => str.startsWith("[") && str.containsAny(anything.enum);
+    exactly(String str) => isArrayType(str) && trimArrayChars(str) in anything.enum;
 }
 shared object sequenceWithComplex extends Type() {
     enum = {};
-    exactly(String str) => str.startsWith("[") && !(str in basic.enum.chain(anything.enum).chain(stringParsed.enum));
+    exactly(String str) => isArrayType(str) && !(trimArrayChars(str) in basic.enum.chain(anything.enum).chain(stringParsed.enum));
 }
 shared object sequenceWithStringParsed extends Type() {
     enum = {};
-    exactly(String str) => str.startsWith("[") && str.containsAny(stringParsed.enum) ;
+    exactly(String str) => isArrayType(str) && trimArrayChars(str) in stringParsed.enum ;
 }
