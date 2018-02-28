@@ -3,10 +3,10 @@ import ceylon.time {
 }
 
 String sharedFieldTemplate(String[2] field)
-        => "shared ``field[0]`` ``field[1]``";
+        => "shared ``field[0]`` ``escapeCeylonKeywords(field[1])``";
 
 String fieldTemplate(String[2] field)
-        => "``field[0]`` ``field[1]``";
+        => "``field[0]`` ``escapeCeylonKeywords(field[1])``";
 
 String formatClassName(String str)
         => str[0..0].uppercased +
@@ -29,8 +29,25 @@ String formatArrayNesting(String typeName, Integer arrayDepth) {
     return "[".repeat(arrayDepth) + typeName + "*]".repeat(arrayDepth);
 }
 
+Boolean isArrayType(String typeName) => typeName.startsWith("[") && typeName.endsWith("*]");
+
+Integer arrayDepth(String typeName){
+    if(isArrayType(typeName)) {
+        return typeName.takeWhile('['.equals).size;
+    }
+    return 0;
+}
+
+String trimArrayChars(String typeName) {
+    assert(isArrayType(typeName));
+    return typeName[1..typeName.size-3];
+}
+
 "1 indent = 4 spaces"
 String makeIndent(Integer size = 1) => "    ".repeat(size);
 String makeIndentWithNewLine(Integer size) => "\n" + makeIndent(size);
 
-
+String escapeCeylonKeywords(String str)
+        => (str in {"in", "out", "value", "if", "else", "function", "class"})
+            then "\\i" + str
+            else str;
