@@ -48,15 +48,7 @@ Map<String, [String*]> mergeImports({<String->String[2]>*} imports) {
 }
 
 Set<String> findAdditionalJsonTypesForImport(Set<String> types){
-    Boolean isArrayNeeded = types.find {
-        Boolean selecting(String t) {
-            return sequenceWithBasic.exactly(t) ||
-            sequenceWithAnything.exactly(t) ||
-            sequenceWithComplex.exactly(t) ||
-            sequenceWithStringParsed.exactly(t);
-        }
-    } exists;
-    if(isArrayNeeded) {
+    if(types.find(isArrayType) exists) {
         return types.union(set{"parseJson", "JsonObject", "JsonArray"});
     }
     return types.union(set{"parseJson", "JsonObject"});
@@ -71,7 +63,9 @@ Set<String> findAdditinalParseFunctionsForImport(Set<String> types){
 
 shared String->String emitExternalizableClass(String->{[String, String]*} classInfo) {
     value className->fields = classInfo;
-    value uniqTypes = set(fields.map(([t, v]) => t));
+    value fieldTypes = fields.map(([t, v]) => t);
+    value uniqTypes = set(fieldTypes.chain(fieldTypes.map(trimArrayChars))); // with nested types
+
     value classContent
              = "shared class ``className`` {
                     ``defineFields(fields, 1)``;

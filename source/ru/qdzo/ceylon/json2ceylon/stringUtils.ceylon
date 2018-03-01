@@ -39,8 +39,10 @@ Integer arrayDepth(String typeName){
 }
 
 String trimArrayChars(String typeName) {
-    assert(isArrayType(typeName));
-    return typeName[1..typeName.size-3];
+    if(isArrayType(typeName)) {
+        return typeName[1..typeName.size-3];
+    }
+    return typeName;
 }
 
 "1 indent = 4 spaces"
