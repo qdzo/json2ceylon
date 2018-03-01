@@ -176,8 +176,8 @@ String assertField(String type, String name, Integer indentSize) {
     }
     case (sequenceWithComplex) {
         if (arrayDepth(type) == 1) {
-            return "``indent``assert(is [JsonObject*] ``name``JsObjs = jsObj.getArray(\"``name``\").narrow<JsonObject>().sequence(),
-                    ``indent``       is ``type`` ``escapedName`` = ``name``JsObjs.collect(``trimArrayChars(type)``.fromJson));";
+            return "``indent``[JsonObject*] ``name``JsObjs = jsObj.getArray(\"``name``\").narrow<JsonObject>().sequence();
+                    ``indent````type`` ``escapedName`` = ``name``JsObjs.collect(``trimArrayChars(type)``.fromJson);";
         }
         return "";
     }
