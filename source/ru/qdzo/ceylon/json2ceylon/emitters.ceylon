@@ -90,6 +90,7 @@ shared String->String emitExternalizableClass(String->{[String, String]*} classI
                         ``fieldsToJsonEntries(fields, 2)``
                     };
 
+                    shared actual String string => toJson.string;
                 }";
     value importLines =
             emitAdditionalImports(
