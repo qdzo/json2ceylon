@@ -105,7 +105,7 @@ String defineParseUUIDFn(Integer indentSize)
              ``indent``    try {
              ``indent``        return UUID.fromString(str);
              ``indent``    } catch(Exception e) {
-             ``indent``        return e;
+             ``indent``        return Exception(\"Can't parse UUID string: \" + str + \", error: \" + e.message);
              ``indent``    }
              ``indent``}";
 
