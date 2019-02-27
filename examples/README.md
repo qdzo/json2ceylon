@@ -23,7 +23,7 @@ user.json:
 
 run `./generate.sh`
 
-Files generated and saved to *gen* dir.
+Files generated and saved to **gen** dir.
 
 
 ## Generate externalizable classes
@@ -32,6 +32,6 @@ Files generated and saved to *gen* dir.
 
 run `./generate_exernalizable.sh`
 
-Files generated and saved to *gen_ext* dir.
+Files generated and saved to **gen_ext** dir.
 
 

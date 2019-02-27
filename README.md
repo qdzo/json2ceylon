@@ -3,7 +3,7 @@ Ceylon2Json - Ceylon CLI-Tool to generate ceylon classes from json file
 
 Simple tool which can generate ceylon classes from single deeply-nested json file.
 
-Examples you can find in *examples* directory
+Examples you can find in [**examples** ](https://github.com/qdzo/json2ceylon/tree/master/examples) directory
 
 ## Instalation
 
@@ -32,7 +32,7 @@ Two main installation methods
 - as ceylon CLI plugin
 
 
-Ceylon default installation (publish to *USER* - local ceylon-repo)
+Ceylon default installation (publish to **USER** - local ceylon-repo)
 
     ant publish
 
@@ -43,16 +43,14 @@ Installation as ceylon plugin
 
 ## Usage
 
-Usage vary on installation method, and every method has it's strong and weak points in usage.
+Usage vary on installation method, and every method has it's strong and weak points.
 
 - Default installation has adantages in help message and cmd options,
   but requires full module name and named-arguments
 - Plugin installation provides more obscure help message, but has more short command
 
 
-
-Ceylon CLI Usage
-
+Ceylon default installation usage
 
     json2ceylon - utility, that generates ceylon classes from given json file.
     Usage:
@@ -65,13 +63,13 @@ Ceylon CLI Usage
       --debug          (-d) - print debug information
 
 
-Ceylon CLI plugin usage
+Ceylon plugin usage
 
       ceylon json-2-ceylon [--externalizable] input-file output-dir classname
 
       Example:  ceylon json-2-ceylon file.json out_dir \"RootClassName\"
 
 
-## LICENCE
+## Licence
 
 Distributed under the Apache License, Version 2.0.
