@@ -1,0 +1,14 @@
+{
+  "uid" : "6434723B-F8E4-4A5A-BAFF-8467A239527F",
+  "name" : "Vitaly",
+  "address" : {
+    "street" : "Gagarin",
+    "house" : 55
+  },
+  "role": "Dev",
+  "registered" : "2019-01-01T12:00:00",
+  "activity": {
+    "lastLogin": "2019-02-27",
+    "lastActivity": "23:22:00"
+  }
+}
