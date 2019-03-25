@@ -5,7 +5,7 @@ Simple tool which can generate ceylon classes from single deeply-nested json fil
 
 Examples you can find in [**examples** ](https://github.com/qdzo/json2ceylon/tree/master/examples) directory
 
-## Instalation
+## Installation
 
 Module is not published to ceylon-herd yet, and has only local installation instructions.
 
