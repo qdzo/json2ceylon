@@ -39,11 +39,15 @@ void json2ceylon(
         String clazzName,
         Boolean externalizable = false) {
 
-    "Input file should exists: ``inputFile``"
-    assert(is File jsonFile = parsePath(inputFile).resource);
+    value jsonFile = parsePath(inputFile).resource;
+    if(!is File jsonFile) {
+       throw Exception("Input file should exists - ``inputFile``");
+    }
 
-    "Output dir should be dir or not exists"
-    assert(is Nil|Directory resource = parsePath(outputDir).resource);
+    value resource = parsePath(outputDir).resource;
+    if(!is Nil|Directory resource) {
+       throw Exception("Output dir should be dir or not exists - ``resource``");
+    }
 
     Directory outDir = if(is Nil resource)
     then resource.createDirectory(true)
